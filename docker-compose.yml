@@ -1,0 +1,14 @@
+services:
+  bot-wa:
+    build: .
+    container_name: bot-wa
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Jakarta
+    volumes:
+      # Pasang berkas environment
+      - ./.env:/app/.env
+      # Folder data agar riwayat keuangan dan absen mahasiswa tetap tersimpan (persist)
+      - ./data:/app/data
+      # Folder session baileys agar tidak perlu scan QR ulang setiap container di-restart
+      - ./auth_info_baileys:/app/auth_info_baileys
