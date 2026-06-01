@@ -12,3 +12,5 @@ services:
       - ./data:/app/data
       # Folder session baileys agar tidak perlu scan QR ulang setiap container di-restart
       - ./auth_info_baileys:/app/auth_info_baileys
+    ports:
+      - "3000:3000"
