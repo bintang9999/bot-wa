@@ -2,6 +2,7 @@ import makeWASocket, { useMultiFileAuthState, DisconnectReason, areJidsSameUser 
 import pino from 'pino';
 import qrcode from 'qrcode-terminal';
 import dotenv from 'dotenv';
+import express from 'express';
 import { handleCommand } from './commands.js';
 import { startPresensiMonitoring } from './presensi.js';
 import { askGemini } from './ai.js';
@@ -26,6 +27,64 @@ const ownerJid = `${cleanOwner}@s.whatsapp.net`;
 console.log(`Bot dikonfigurasi untuk nomor pemilik: ${cleanOwner} (${ownerJid})`);
 
 let isMonitoringStarted = false;
+let globalWaSocket = null;
+
+// Setup Express Webhook Server
+const app = express();
+app.use(express.json());
+const WEBHOOK_PORT = process.env.WEBHOOK_PORT || 3000;
+
+app.post('/webhook/appsheet', async (req, res) => {
+  try {
+    console.log(`[Webhook] Menerima data request:`, req.body);
+
+    // Mendukung format kustom kita (nomor, pelapor) ATAU format bawaan AppSheet (NO_WA, PELAPOR)
+    const nomor = req.body.nomor || req.body.NO_WA;
+    const pelapor = req.body.pelapor || req.body.PELAPOR;
+    const barang = req.body.barang || req.body.NAMA_BARANG;
+    const status = req.body.status || req.body.STATUS;
+    const tanggal = req.body.tanggal || req.body.TANGGAL;
+
+    if (!nomor || !pelapor || !barang || !status) {
+      console.warn('[Webhook] Ditolak: Data tidak lengkap (nomor, pelapor, barang, status wajib ada).');
+      return res.status(400).json({ error: 'Data tidak lengkap' });
+    }
+
+    // Format nomor WA
+    let cleanNomor = nomor.toString().replace(/\D/g, '');
+    
+    // Validasi: Cegah masuknya nomor tidak valid seperti 'NaN' atau teks kosong
+    if (cleanNomor.length < 5) {
+      console.warn(`[Webhook] Ditolak: Nomor WA tidak valid (${nomor}).`);
+      return res.status(400).json({ error: 'Nomor WA tidak valid' });
+    }
+
+    if (cleanNomor.startsWith('0')) {
+      cleanNomor = '62' + cleanNomor.slice(1);
+    } else if (!cleanNomor.startsWith('62')) {
+      cleanNomor = '62' + cleanNomor;
+    }
+    const targetJid = `${cleanNomor}@s.whatsapp.net`;
+
+    const messageText = `UPDATE LAPORAN KERUSAKAN\n\nHalo ${pelapor},\n\nStatus laporan:\n${barang}\n\nTelah diperbarui menjadi:\n✅ ${status}\n\nTanggal:\n${tanggal || '-'}\n\nTerima kasih.`;
+
+    if (globalWaSocket) {
+      await globalWaSocket.sendMessage(targetJid, { text: messageText });
+      console.log(`[Webhook] Notifikasi dikirim ke ${cleanNomor}`);
+      res.status(200).json({ success: true, message: 'Notifikasi terkirim' });
+    } else {
+      console.warn('[Webhook] Bot WA belum terhubung, tidak dapat mengirim notifikasi');
+      res.status(503).json({ error: 'Bot WA belum siap' });
+    }
+  } catch (error) {
+    console.error('[Webhook] Terjadi kesalahan:', error);
+    res.status(500).json({ error: 'Kesalahan internal server' });
+  }
+});
+
+app.listen(WEBHOOK_PORT, () => {
+  console.log(`[Webhook] Server mendengarkan webhook di port ${WEBHOOK_PORT}`);
+});
 
 async function connectToWhatsApp() {
   const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
@@ -76,7 +135,9 @@ async function connectToWhatsApp() {
       } else {
         console.log('Bot keluar dari sesi WhatsApp. Jalankan kembali untuk menghubungkan ulang.');
       }
+      globalWaSocket = null;
     } else if (connection === 'open') {
+      globalWaSocket = sock;
       console.clear();
       console.log('==================================================');
       console.log('🎉 BOT WHATSAPP KEUANGAN & PRESENSI AKTIF!');
