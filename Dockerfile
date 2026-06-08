@@ -17,4 +17,10 @@ RUN npm install
 # Salin semua berkas proyek
 COPY . .
 
+# Build frontend
+WORKDIR /app/web_app
+RUN npm install
+RUN npm run build
+WORKDIR /app
+
 CMD ["node", "index.js"]

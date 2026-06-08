@@ -4,10 +4,48 @@ import qrcode from 'qrcode-terminal';
 import dotenv from 'dotenv';
 import express from 'express';
 import { handleCommand } from './commands.js';
-import { startPresensiMonitoring } from './presensi.js';
+import { startPresensiMonitoring, getOwnerDb, getV6Db } from './presensi.js';
 import { askGemini } from './ai.js';
+import { getBalance, getSummary, getTransactions, addTransaction, deleteTransaction, getEWallets, addEWallet, deleteEWallet, getCategories, addCategory, deleteCategory, getSixMonthsTrend, getGoals, addGoal, fundGoal, deleteGoal, getExportCSV } from './database.js';
+import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
+
+const botLogs = [];
+const maxLogs = 100;
+const originalLog = console.log;
+const originalError = console.error;
+const originalWarn = console.warn;
+
+function addLog(type, args) {
+  try {
+    const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ');
+    botLogs.push({ type, time: new Date().toISOString(), message: msg });
+    if (botLogs.length > maxLogs) botLogs.shift();
+  } catch(e) {}
+}
+
+console.log = function(...args) {
+  addLog('log', args);
+  originalLog.apply(console, args);
+};
+console.error = function(...args) {
+  addLog('error', args);
+  originalError.apply(console, args);
+};
+console.warn = function(...args) {
+  addLog('warn', args);
+  originalWarn.apply(console, args);
+};
+
+let waConnectionStatus = 'disconnected';
+let waQrData = '';
 
 const OWNER_NUMBER = process.env.OWNER_NUMBER;
 
@@ -32,7 +70,155 @@ let globalWaSocket = null;
 // Setup Express Webhook Server
 const app = express();
 app.use(express.json());
+app.use(cors());
 const WEBHOOK_PORT = process.env.WEBHOOK_PORT || 3000;
+
+// Serve static frontend web_app if exists
+const frontendPath = path.join(__dirname, 'web_app', 'dist');
+if (fs.existsSync(frontendPath)) {
+  app.use(express.static(frontendPath));
+}
+
+// ==========================================
+// API Endpoints for Web Dashboard
+// ==========================================
+app.get('/api/finance/balance', (req, res) => {
+  res.json(getBalance());
+});
+
+app.get('/api/finance/summary', (req, res) => {
+  const period = req.query.period || 'bulan';
+  res.json(getSummary(period));
+});
+
+app.get('/api/finance/transactions', (req, res) => {
+  const limit = req.query.limit ? parseInt(req.query.limit) : null;
+  res.json(getTransactions(limit));
+});
+
+app.get('/api/presensi/status', (req, res) => {
+  const ownerDb = getOwnerDb();
+  const v6Db = getV6Db();
+  res.json({ owner: ownerDb, publicUsers: v6Db.users });
+});
+
+app.get('/api/logs', (req, res) => {
+  res.json(botLogs);
+});
+
+app.get('/api/bot/status', (req, res) => {
+  res.json({ status: waConnectionStatus, qrCode: waQrData });
+});
+
+app.post('/api/finance/transaction', (req, res) => {
+  const { type, amount, category, description } = req.body;
+  if (!type || !amount || !category) {
+    return res.status(400).json({ error: 'Data tidak lengkap' });
+  }
+  const tx = addTransaction(type, amount, category, description || '');
+  res.json({ success: true, transaction: tx });
+});
+
+app.delete('/api/finance/transaction/:id', (req, res) => {
+  const success = deleteTransaction(req.params.id);
+  if (success) {
+    res.json({ success: true, message: 'Transaction deleted' });
+  } else {
+    res.status(404).json({ error: 'Transaction not found' });
+  }
+});
+
+app.get('/api/finance/ewallets', (req, res) => {
+  res.json(getEWallets());
+});
+
+app.post('/api/finance/ewallet', (req, res) => {
+  const { name, balance, color } = req.body;
+  if (!name || balance === undefined) {
+    return res.status(400).json({ error: 'Data tidak lengkap' });
+  }
+  const ew = addEWallet(name, balance, color);
+  res.json({ success: true, ewallet: ew });
+});
+
+app.delete('/api/finance/ewallet/:id', (req, res) => {
+  const success = deleteEWallet(req.params.id);
+  if (success) {
+    res.json({ success: true, message: 'E-Wallet deleted' });
+  } else {
+    res.status(404).json({ error: 'E-Wallet not found' });
+  }
+});
+
+app.get('/api/finance/categories', (req, res) => {
+  res.json(getCategories());
+});
+
+app.post('/api/finance/category', (req, res) => {
+  const { name, type, color } = req.body;
+  if (!name || !type) {
+    return res.status(400).json({ error: 'Data tidak lengkap' });
+  }
+  const cat = addCategory(name, type, color);
+  res.json({ success: true, category: cat });
+});
+
+app.delete('/api/finance/category/:id', (req, res) => {
+  const success = deleteCategory(req.params.id);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(404).json({ error: 'Kategori tidak ditemukan' });
+  }
+});
+
+app.get('/api/finance/trend', (req, res) => {
+  res.json(getSixMonthsTrend());
+});
+
+app.get('/api/finance/goals', (req, res) => {
+  res.json(getGoals());
+});
+
+app.post('/api/finance/goal', (req, res) => {
+  const { name, targetAmount, deadline, category, color } = req.body;
+  if (!name || !targetAmount || !deadline) {
+    return res.status(400).json({ error: 'Data tidak lengkap' });
+  }
+  const goal = addGoal(name, targetAmount, deadline, category, color);
+  res.json({ success: true, goal });
+});
+
+app.post('/api/finance/goal/:id/fund', (req, res) => {
+  const { amount } = req.body;
+  const goal = fundGoal(req.params.id, amount);
+  if (goal) {
+    res.json({ success: true, goal });
+  } else {
+    res.status(404).json({ error: 'Tujuan tidak ditemukan' });
+  }
+});
+
+app.delete('/api/finance/goal/:id', (req, res) => {
+  const success = deleteGoal(req.params.id);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(404).json({ error: 'Tujuan tidak ditemukan' });
+  }
+});
+
+app.get('/api/finance/export', (req, res) => {
+  const csv = getExportCSV();
+  if (csv) {
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="transaksi-keuangan.csv"');
+    res.send(csv);
+  } else {
+    res.status(400).json({ error: 'Tidak ada transaksi untuk diekspor' });
+  }
+});
+// ==========================================
 
 app.post('/webhook/appsheet', async (req, res) => {
   try {
@@ -117,6 +303,8 @@ async function connectToWhatsApp() {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
+      waConnectionStatus = 'qr';
+      waQrData = qr;
       console.clear();
       console.log('==================================================');
       console.log('SCAN QR CODE BERIKUT UNTUK MENGHUBUNGKAN BOT WA:');
@@ -128,6 +316,8 @@ async function connectToWhatsApp() {
     }
 
     if (connection === 'close') {
+      waConnectionStatus = 'disconnected';
+      waQrData = '';
       const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
       console.log(`Koneksi terputus. Mencoba menghubungkan kembali: ${shouldReconnect}`);
       if (shouldReconnect) {
@@ -137,6 +327,8 @@ async function connectToWhatsApp() {
       }
       globalWaSocket = null;
     } else if (connection === 'open') {
+      waConnectionStatus = 'connected';
+      waQrData = '';
       globalWaSocket = sock;
       console.clear();
       console.log('==================================================');
