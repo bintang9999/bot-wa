@@ -8,7 +8,8 @@ import {
   Wallet,
   History,
   Landmark,
-  Moon
+  Moon,
+  CreditCard
 } from 'lucide-react';
 
 const menus = [
@@ -41,6 +42,11 @@ const menus = [
     to: '/tujuan',
     label: 'Tujuan',
     icon: Target,
+  },
+  {
+    to: '/cicilan',
+    label: 'Cicilan',
+    icon: CreditCard,
   },
 ];
 

@@ -11,9 +11,6 @@ yarn-error.log*
 data/
 auth_info_baileys/
 
-# Folder Lokal & Backup
-server /
-web_app_backup/
 
 # Editor/Sistem
 .DS_Store

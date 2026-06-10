@@ -5,7 +5,11 @@ import {
   getBalance, 
   getSummary, 
   getExportCSV, 
-  formatRupiah 
+  formatRupiah,
+  getCicilans,
+  addCicilan,
+  setorCicilan,
+  deleteCicilan
 } from './database.js';
 
 import { 
@@ -122,6 +126,26 @@ Lihat status akun
 
 • \`/logout\`
 Hapus data akun dari bot
+
+──────────────────
+
+🏦 *Cicilan/Hutang*
+
+• \`/cicilan_tambah <nama> <total> [tgl_jatuh_tempo]\`
+Tambah cicilan baru
+Contoh:
+\`/cicilan_tambah mobil 30000000 28\`
+
+• \`/cicilan_setor <id_cicilan> <nominal>\`
+Setor uang cicilan
+Contoh:
+\`/cicilan_setor cicilan-1234 50k\`
+
+• \`/cicilan_list\`
+Lihat daftar cicilan & sisa
+
+• \`/cicilan_hapus <id>\`
+Hapus cicilan
 
 ──────────────────
 
@@ -425,18 +449,138 @@ function handleAbsenStatus(senderJid) {
 }
 
 function handleLogout(senderJid) {
-  const db = getV6Db();
-  if (!db.users[senderJid]) {
-    return { text: `❌ Anda tidak terdaftar dalam sistem bot.` };
+   const db = getV6Db();
+   if (!db.users[senderJid]) {
+     return { text: `❌ Anda tidak terdaftar dalam sistem bot.` };
+   }
+ 
+   const npm = db.users[senderJid].npm;
+   delete db.users[senderJid];
+   saveV6Db(db);
+ 
+   return {
+     text: `🗑️ *Akun Anda (NPM: ${npm}) berhasil dihapus permanen* dari database bot. Sesi monitoring telah dihentikan.`
+   };
+ }
+
+// --- CICILAN/HUTANG (OWNER ONLY) ---
+function handleCicilanTambah(args) {
+  if (args.length < 2) {
+    return {
+      text: `⚠️ Format salah! Gunakan:\n*/cicilan_tambah <nama> <total> [tgl_jatuh_tempo]*\n\nContoh:\n\`/cicilan_tambah mobil 30000000 28\``
+    };
   }
 
-  const npm = db.users[senderJid].npm;
-  delete db.users[senderJid];
-  saveV6Db(db);
+  const name = args[0];
+  const totalText = args[1];
+  const dueDate = args[2] ? parseInt(args[2]) : 28;
+
+  const total = parseAmount(totalText);
+  if (total === null || total <= 0) {
+    return { text: `❌ Total cicilan tidak valid: *${totalText}*` };
+  }
+
+  if (dueDate < 1 || dueDate > 31) {
+    return { text: `❌ Tanggal jatuh tempo harus antara 1-31. Gunakan default: */cicilan_tambah ${name} ${totalText}*` };
+  }
+
+  const cicilan = addCicilan(name, total, dueDate);
 
   return {
-    text: `🗑️ *Akun Anda (NPM: ${npm}) berhasil dihapus permanen* dari database bot. Sesi monitoring telah dihentikan.`
+    text: `✅ *Cicilan Baru Ditambahkan!*\n\n` +
+          `🆔 ID: \`${cicilan.id}\`\n` +
+          `📋 Nama: *${cicilan.name}*\n` +
+          `💰 Total: *${formatRupiah(cicilan.totalAmount)}*\n` +
+          `📅 Jatuh Tempo: Tgl *${cicilan.dueDate}* setiap bulan\n` +
+          `💾 Terkumpul: *${formatRupiah(cicilan.collected)}*\n` +
+          `⏳ Kurang: *${formatRupiah(cicilan.totalAmount - cicilan.collected)}*`
   };
+}
+
+function handleCicilanSetor(args) {
+  if (args.length < 2) {
+    return {
+      text: `⚠️ Format salah! Gunakan:\n*/cicilan_setor <id_cicilan> <nominal>*\n\nContoh:\n\`/cicilan_setor cicilan-1685208573210 500k\``
+    };
+  }
+
+  const cicilan_id = args[0].trim();
+  const amountText = args[1];
+  const amount = parseAmount(amountText);
+
+  if (amount === null || amount <= 0) {
+    return { text: `❌ Nominal tidak valid: *${amountText}*` };
+  }
+
+  if (amount > 50000) {
+    return { text: `⚠️ Nominal setor lebih dari 50rb (*${formatRupiah(amount)}*). Lanjutkan? Ketik ulang command untuk konfirmasi.` };
+  }
+
+  const result = setorCicilan(cicilan_id, amount);
+  if (!result) {
+    return { text: `❌ Cicilan dengan ID \`${cicilan_id}\` tidak ditemukan. Gunakan */cicilan_list* untuk melihat daftar.` };
+  }
+
+  const remaining = result.totalAmount - result.collected;
+  let statusMsg = '';
+  if (result.status === 'completed') {
+    statusMsg = `\n✅ *CICILAN LUNAS!*`;
+  } else {
+    statusMsg = `\n⏳ *Kurang: ${formatRupiah(remaining)}*`;
+  }
+
+  return {
+    text: `✅ *Setor Cicilan Berhasil!*\n\n` +
+          `📋 Cicilan: *${result.name}*\n` +
+          `💵 Setor: *${formatRupiah(amount)}*\n` +
+          `💾 Total Terkumpul: *${formatRupiah(result.collected)}* / ${formatRupiah(result.totalAmount)}${statusMsg}`
+  };
+}
+
+function handleCicilanList() {
+  const cicilans = getCicilans();
+  if (cicilans.length === 0) {
+    return { text: `📜 Belum ada cicilan terdaftar.` };
+  }
+
+  let text = `=== 📋 DAFTAR CICILAN ===\n\n`;
+  cicilans.forEach(c => {
+    const remaining = c.totalAmount - c.collected;
+    const progress = Math.round((c.collected / c.totalAmount) * 100);
+    const statusIcon = c.status === 'completed' ? '✅' : '⏳';
+    
+    text += `${statusIcon} *${c.name}*\n` +
+            `  ID: \`${c.id}\`\n` +
+            `  📅 Jatuh Tempo: Tgl ${c.dueDate}\n` +
+            `  💰 Total: ${formatRupiah(c.totalAmount)}\n` +
+            `  💾 Terkumpul: ${formatRupiah(c.collected)} (${progress}%)\n` +
+            `  ⏳ Kurang: ${formatRupiah(remaining)}\n`;
+            
+    if (c.status !== 'completed' && remaining > 0) {
+      text += `  📊 Estimasi Lunas:\n` +
+              `     • 20k/hari: ${Math.ceil(remaining / 20000)} hari\n` +
+              `     • 30k/hari: ${Math.ceil(remaining / 30000)} hari\n` +
+              `     • 40k/hari: ${Math.ceil(remaining / 40000)} hari\n` +
+              `     • 50k/hari: ${Math.ceil(remaining / 50000)} hari\n`;
+    }
+    text += `\n`;
+  });
+
+  return { text: text.trim() };
+}
+
+function handleCicilanHapus(args) {
+  if (args.length === 0) {
+    return { text: `⚠️ Format salah! Gunakan: */cicilan_hapus <id_cicilan>*` };
+  }
+
+  const id = args[0].trim();
+  const success = deleteCicilan(id);
+  if (success) {
+    return { text: `✅ Cicilan \`${id}\` berhasil dihapus.` };
+  } else {
+    return { text: `❌ Cicilan dengan ID \`${id}\` tidak ditemukan.` };
+  }
 }
 
 // Main Command Handler
@@ -451,7 +595,8 @@ export async function handleCommand(messageText, senderJid, isOwner) {
   // Periksa apakah ini command khusus owner/privat
   const ownerCommands = [
     '/masuk', '/keluar', '/saldo', '/rekap', '/riwayat', '/hapus', '/ekspor',
-    '/pantau_start', '/pantau_stop', '/pantau_status'
+    '/pantau_start', '/pantau_stop', '/pantau_status',
+    '/cicilan_tambah', '/cicilan_setor', '/cicilan_list', '/cicilan_hapus'
   ];
 
   if (ownerCommands.includes(command) && !isOwner) {
@@ -500,6 +645,16 @@ export async function handleCommand(messageText, senderJid, isOwner) {
     case '/logout':
     case '/hapus_akun':
       return handleLogout(senderJid);
+
+    // --- CICILAN/HUTANG (OWNER ONLY) ---
+    case '/cicilan_tambah':
+      return handleCicilanTambah(args);
+    case '/cicilan_setor':
+      return handleCicilanSetor(args);
+    case '/cicilan_list':
+      return handleCicilanList();
+    case '/cicilan_hapus':
+      return handleCicilanHapus(args);
 
     default:
       return { text: `❌ Perintah tidak dikenal: *${command}*\nKetik */menu* untuk melihat daftar perintah.` };

@@ -10,7 +10,7 @@ if (!fs.existsSync(DB_DIR)) {
 }
 
 if (!fs.existsSync(DB_PATH)) {
-  fs.writeFileSync(DB_PATH, JSON.stringify({ transactions: [], ewallets: [], categories: [], goals: [] }, null, 2));
+  fs.writeFileSync(DB_PATH, JSON.stringify({ transactions: [], ewallets: [], categories: [], goals: [], cicilans: [] }, null, 2));
 }
 
 // Fungsi untuk membaca database
@@ -21,10 +21,11 @@ function readDB() {
     if (!parsed.ewallets) parsed.ewallets = [];
     if (!parsed.categories) parsed.categories = [];
     if (!parsed.goals) parsed.goals = [];
+    if (!parsed.cicilans) parsed.cicilans = [];
     return parsed;
   } catch (error) {
     console.error('Gagal membaca database, membuat data kosong:', error);
-    return { transactions: [], ewallets: [], categories: [], goals: [] };
+    return { transactions: [], ewallets: [], categories: [], goals: [], cicilans: [] };
   }
 }
 
@@ -376,6 +377,58 @@ export function deleteGoal(id) {
   const initLen = db.goals.length;
   db.goals = db.goals.filter(g => g.id !== id);
   if (db.goals.length < initLen) {
+    writeDB(db);
+    return true;
+  }
+  return false;
+}
+
+// Mendapatkan daftar Cicilan/Hutang
+export function getCicilans() {
+  const db = readDB();
+  return db.cicilans || [];
+}
+
+// Menambah Cicilan/Hutang
+export function addCicilan(name, totalAmount, dueDate) {
+  const db = readDB();
+  if (!db.cicilans) db.cicilans = [];
+  const newCicilan = {
+    id: `cicilan-${Date.now()}`,
+    name,
+    totalAmount: parseFloat(totalAmount),
+    collected: 0,
+    dueDate: dueDate || 28,
+    status: 'active'
+  };
+  db.cicilans.push(newCicilan);
+  writeDB(db);
+  return newCicilan;
+}
+
+// Setor Uang ke Cicilan/Hutang
+export function setorCicilan(id, amount) {
+  const db = readDB();
+  if (!db.cicilans) return null;
+  const idx = db.cicilans.findIndex(c => c.id === id);
+  if (idx === -1) return null;
+  
+  db.cicilans[idx].collected += parseFloat(amount);
+  if (db.cicilans[idx].collected >= db.cicilans[idx].totalAmount) {
+    db.cicilans[idx].status = 'completed';
+  }
+  
+  writeDB(db);
+  return db.cicilans[idx];
+}
+
+// Menghapus Cicilan
+export function deleteCicilan(id) {
+  const db = readDB();
+  if (!db.cicilans) return false;
+  const initLen = db.cicilans.length;
+  db.cicilans = db.cicilans.filter(c => c.id !== id);
+  if (db.cicilans.length < initLen) {
     writeDB(db);
     return true;
   }

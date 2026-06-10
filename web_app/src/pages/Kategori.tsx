@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { BarChart3, Trash2, Edit2, Plus, X } from 'lucide-react';
 
 interface Category {
@@ -31,6 +32,7 @@ export default function Kategori() {
 
   useEffect(() => {
     fetchCategories();
+        toast.success("Kategori diperbarui");
   }, []);
 
   const handleAddCategory = async (e: React.FormEvent) => {
@@ -45,12 +47,13 @@ export default function Kategori() {
         setIsModalOpen(false);
         setFormData({ name: '', type: 'pengeluaran', color: '#3b82f6' });
         fetchCategories();
+        toast.success("Kategori diperbarui");
       } else {
-        alert("Gagal menambahkan kategori");
+        toast.error("Gagal menambahkan kategori");
       }
     } catch (err) {
       console.error(err);
-      alert("Terjadi kesalahan");
+      toast.error("Terjadi kesalahan");
     }
   };
 
@@ -58,11 +61,15 @@ export default function Kategori() {
     if (!confirm("Yakin ingin menghapus kategori ini?")) return;
     try {
       const res = await fetch(`/api/finance/category/${id}`, { method: 'DELETE' });
-      if (res.ok) fetchCategories();
-      else alert("Gagal menghapus kategori");
+      if (res.ok) {
+        fetchCategories();
+        toast.success("Kategori berhasil dihapus");
+      } else {
+        toast.error("Gagal menghapus kategori");
+      }
     } catch (err) {
       console.error(err);
-      alert("Terjadi kesalahan");
+      toast.error("Terjadi kesalahan");
     }
   };
 
@@ -70,10 +77,6 @@ export default function Kategori() {
 
   return (
     <div className="animate-fade-in pb-12">
-      <div className="mb-8">
-        <h1 className="mb-2 text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400">Kategori</h1>
-        <p className="text-sm font-medium text-zinc-400">Kelola kategori pengeluaran dan pemasukan</p>
-      </div>
 
       {/* Add Category Button */}
       <button 

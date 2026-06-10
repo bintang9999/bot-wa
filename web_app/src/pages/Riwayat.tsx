@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { Calendar, Download, Filter, Plus } from 'lucide-react';
 import TransactionModal from '../components/Finance/TransactionModal';
 import SwipeableTransaction from '../components/Finance/SwipeableTransaction';
@@ -45,7 +46,7 @@ export default function Riwayat() {
         if (res.ok) {
           fetchHistory();
         } else {
-          alert('Gagal menghapus transaksi');
+          toast.error('Gagal menghapus transaksi');
         }
       } catch (err) {
         console.error(err);
@@ -83,11 +84,11 @@ export default function Riwayat() {
         });
         fetchHistory();
       } else {
-        alert("Gagal menambahkan transaksi");
+        toast.error('Gagal menambahkan transaksi');
       }
     } catch (err) {
       console.error(err);
-      alert("Terjadi kesalahan.");
+      toast.error('Terjadi kesalahan');
     }
   };
 
@@ -105,11 +106,11 @@ export default function Riwayat() {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
       } else {
-        alert('Gagal mengekspor data');
+        toast.error('Gagal mengekspor data');
       }
     } catch (err) {
       console.error(err);
-      alert('Terjadi kesalahan');
+      toast.error('Terjadi kesalahan');
     }
   };
 
@@ -130,10 +131,6 @@ export default function Riwayat() {
 
   return (
     <div className="animate-fade-in pb-12">
-      <div className="mb-8">
-        <h1 className="mb-2 text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400">Riwayat</h1>
-        <p className="text-sm font-medium text-zinc-400">Lihat riwayat semua transaksi keuanganmu</p>
-      </div>
 
       {/* Toolbar */}
       <div className="flex flex-col md:flex-row gap-4 mb-8">

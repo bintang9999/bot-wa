@@ -70,20 +70,20 @@ export default function Dashboard() {
         <Link to="/finance" className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors">Lihat Detail</Link>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-        <div className="glass-premium rounded-3xl p-8 relative overflow-hidden flex flex-col justify-center">
-          <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Pemasukan</span>
-          <span className="text-3xl font-bold text-emerald-500">{formatCurrency(financeSummary?.income || 0)}</span>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-5 mb-8">
+        <div className="glass-premium rounded-2xl md:rounded-3xl p-4 md:p-8 relative overflow-hidden flex flex-col justify-center">
+          <span className="text-[10px] md:text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1 md:mb-2">Pemasukan</span>
+          <span className="text-xl md:text-3xl font-bold text-emerald-500">{formatCurrency(financeSummary?.income || 0)}</span>
           <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
         </div>
-        <div className="glass-premium rounded-3xl p-8 relative overflow-hidden flex flex-col justify-center">
-          <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Pengeluaran</span>
-          <span className="text-3xl font-bold text-red-500">{formatCurrency(financeSummary?.expense || 0)}</span>
+        <div className="glass-premium rounded-2xl md:rounded-3xl p-4 md:p-8 relative overflow-hidden flex flex-col justify-center">
+          <span className="text-[10px] md:text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1 md:mb-2">Pengeluaran</span>
+          <span className="text-xl md:text-3xl font-bold text-red-500">{formatCurrency(financeSummary?.expense || 0)}</span>
           <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-red-500/10 rounded-full blur-2xl pointer-events-none"></div>
         </div>
-        <div className="glass-premium rounded-3xl p-8 relative overflow-hidden flex flex-col justify-center">
-          <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Sisa Saldo</span>
-          <span className="text-3xl font-bold text-blue-500">{formatCurrency(financeSummary?.balance || 0)}</span>
+        <div className="glass-premium rounded-2xl md:rounded-3xl p-4 md:p-8 relative overflow-hidden flex flex-col justify-center">
+          <span className="text-[10px] md:text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1 md:mb-2">Sisa Saldo</span>
+          <span className="text-xl md:text-3xl font-bold text-blue-500">{formatCurrency(financeSummary?.balance || 0)}</span>
           <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
         </div>
       </div>

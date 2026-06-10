@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, Filter, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Search, Plus, Filter, ArrowUpRight, ArrowDownLeft, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import TransactionModal from '../components/Finance/TransactionModal';
 
 interface Transaction {
@@ -59,12 +60,13 @@ export default function Transaksi() {
           date: new Date().toISOString().split('T')[0]
         });
         fetchTransactions();
+        toast.success('Transaksi berhasil ditambahkan');
       } else {
-        alert("Gagal menambahkan transaksi");
+        toast.error("Gagal menambahkan transaksi");
       }
     } catch (err) {
       console.error(err);
-      alert("Terjadi kesalahan.");
+      toast.error("Terjadi kesalahan");
     }
   };
 
@@ -78,14 +80,26 @@ export default function Transaksi() {
     return matchesSearch && matchesType;
   });
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Yakin ingin menghapus transaksi ini?')) return;
+    try {
+      const res = await fetch(`/api/finance/transaction/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchTransactions();
+        toast.success('Transaksi berhasil dihapus');
+      } else {
+        toast.error('Gagal menghapus transaksi');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Terjadi kesalahan');
+    }
+  };
+
   const formatCurrency = (val: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val);
 
   return (
     <div className="animate-fade-in pb-12">
-      <div className="mb-8">
-        <h1 className="mb-2 text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400">Transaksi</h1>
-        <p className="text-sm font-medium text-zinc-400">Kelola semua transaksi keuanganmu</p>
-      </div>
 
       {/* Toolbar */}
       <div className="flex flex-col md:flex-row gap-4 mb-8">
@@ -150,7 +164,8 @@ export default function Transaksi() {
 
       {/* Transaction List */}
       <div className="glass-premium rounded-3xl p-6">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/10">
@@ -159,6 +174,7 @@ export default function Transaksi() {
                 <th className="px-6 py-4 text-left text-xs font-bold text-zinc-400 uppercase tracking-wider">Deskripsi</th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-zinc-400 uppercase tracking-wider">Akun</th>
                 <th className="px-6 py-4 text-right text-xs font-bold text-zinc-400 uppercase tracking-wider">Jumlah</th>
+                <th className="px-6 py-4 text-right text-xs font-bold text-zinc-400 uppercase tracking-wider">Aksi</th>
               </tr>
             </thead>
             <tbody>
@@ -180,10 +196,53 @@ export default function Transaksi() {
                       {formatCurrency(tx.amount)}
                     </span>
                   </td>
+                  <td className="px-6 py-4 text-right">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleDelete(tx.id); }}
+                      className="p-2 hover:bg-red-500/10 rounded-lg transition-colors text-red-500 hover:text-red-400"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="flex flex-col gap-4 md:hidden">
+          {filteredTransactions.map((tx) => (
+            <div key={tx.id} className="p-4 bg-white/5 border border-white/10 rounded-2xl flex flex-col gap-3 relative">
+              <div className="flex justify-between items-start">
+                <div>
+                  <span className="text-sm font-bold text-white px-3 py-1 bg-white/10 rounded-lg inline-block mb-2">
+                    {tx.category}
+                  </span>
+                  <p className="text-sm text-zinc-300 font-medium">{tx.description}</p>
+                </div>
+                <button 
+                  onClick={() => handleDelete(tx.id)}
+                  className="p-2 bg-black/20 hover:bg-red-500/20 rounded-lg transition-colors text-red-500"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+              
+              <div className="flex justify-between items-end mt-1 pt-3 border-t border-white/5">
+                <div className="flex flex-col">
+                  <span className="text-xs text-zinc-500">{new Date(tx.date).toLocaleDateString('id-ID')}</span>
+                  <span className="text-xs text-zinc-500">{tx.account || 'Umum'}</span>
+                </div>
+                <div className={`text-sm font-bold flex items-center gap-1 ${
+                  tx.type === 'pemasukan' ? 'text-emerald-500' : 'text-red-500'
+                }`}>
+                  {tx.type === 'pemasukan' ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}
+                  {formatCurrency(tx.amount)}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
 
         {filteredTransactions.length === 0 && (

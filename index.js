@@ -6,7 +6,7 @@ import express from 'express';
 import { handleCommand } from './commands.js';
 import { startPresensiMonitoring, getOwnerDb, getV6Db } from './presensi.js';
 import { askGemini } from './ai.js';
-import { getBalance, getSummary, getTransactions, addTransaction, deleteTransaction, getEWallets, addEWallet, deleteEWallet, getCategories, addCategory, deleteCategory, getSixMonthsTrend, getGoals, addGoal, fundGoal, deleteGoal, getExportCSV } from './database.js';
+import { getBalance, getSummary, getTransactions, addTransaction, deleteTransaction, getEWallets, addEWallet, deleteEWallet, getCategories, addCategory, deleteCategory, getSixMonthsTrend, getGoals, addGoal, fundGoal, deleteGoal, getExportCSV, getCicilans, addCicilan, setorCicilan, deleteCicilan } from './database.js';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
@@ -205,6 +205,38 @@ app.delete('/api/finance/goal/:id', (req, res) => {
     res.json({ success: true });
   } else {
     res.status(404).json({ error: 'Tujuan tidak ditemukan' });
+  }
+});
+
+app.get("/api/finance/cicilans", (req, res) => {
+  res.json(getCicilans());
+});
+
+app.post("/api/finance/cicilan", (req, res) => {
+  const { name, totalAmount, dueDate } = req.body;
+  if (!name || !totalAmount) {
+    return res.status(400).json({ error: "Data tidak lengkap" });
+  }
+  const cicilan = addCicilan(name, totalAmount, dueDate);
+  res.json({ success: true, cicilan });
+});
+
+app.post("/api/finance/cicilan/:id/setor", (req, res) => {
+  const { amount } = req.body;
+  const cicilan = setorCicilan(req.params.id, amount);
+  if (cicilan) {
+    res.json({ success: true, cicilan });
+  } else {
+    res.status(404).json({ error: "Cicilan tidak ditemukan" });
+  }
+});
+
+app.delete("/api/finance/cicilan/:id", (req, res) => {
+  const success = deleteCicilan(req.params.id);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(404).json({ error: "Cicilan tidak ditemukan" });
   }
 });
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import FinanceHeader from '../components/Finance/FinanceHeader';
 import SummaryCards from '../components/Finance/SummaryCards';
 import type { EWallet } from '../components/Finance/SummaryCards';
@@ -96,11 +97,11 @@ export default function Finance() {
         setFormData({ type: 'pengeluaran', amount: '', category: '', description: '' });
         fetchData(period); // Refresh data
       } else {
-        alert("Gagal menambahkan transaksi");
+        toast.error("Gagal menambahkan transaksi");
       }
     } catch (err) {
       console.error(err);
-      alert("Terjadi kesalahan.");
+      toast.error("Terjadi kesalahan");
     }
   };
 
@@ -114,11 +115,11 @@ export default function Finance() {
       if (res.ok) {
         fetchData(period);
       } else {
-        alert("Gagal menambahkan E-Wallet");
+        toast.error("Gagal menambahkan E-Wallet");
       }
     } catch (err) {
       console.error(err);
-      alert("Terjadi kesalahan.");
+      toast.error("Terjadi kesalahan");
     }
   };
 
@@ -130,11 +131,11 @@ export default function Finance() {
       if (res.ok) {
         fetchData(period);
       } else {
-        alert("Gagal menghapus E-Wallet");
+        toast.error("Gagal menghapus E-Wallet");
       }
     } catch (err) {
       console.error(err);
-      alert("Terjadi kesalahan.");
+      toast.error("Terjadi kesalahan");
     }
   };
 

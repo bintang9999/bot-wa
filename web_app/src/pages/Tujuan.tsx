@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Target, TrendingUp, AlertCircle, CheckCircle2, Plus, Edit2, Trash2, X } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface Goal {
   id: string;
@@ -78,11 +79,13 @@ export default function Tujuan() {
         setAmount('');
         setSelectedGoalId(null);
         fetchGoals();
+        toast.success('Berhasil menyetor dana');
       } else {
-        alert('Gagal menyetor dana');
+        toast.error('Gagal menyetor dana');
       }
     } catch (err) {
       console.error(err);
+      toast.error('Terjadi kesalahan');
     }
   };
 
@@ -99,11 +102,13 @@ export default function Tujuan() {
         setIsAddModalOpen(false);
         setAddFormData({ name: '', targetAmount: '', deadline: '', category: 'Umum', color: '#3b82f6' });
         fetchGoals();
+        toast.success('Berhasil menambah tujuan');
       } else {
-        alert('Gagal menambah tujuan');
+        toast.error('Gagal menambah tujuan');
       }
     } catch (err) {
       console.error(err);
+      toast.error('Terjadi kesalahan');
     }
   };
 
@@ -111,10 +116,15 @@ export default function Tujuan() {
     if (!confirm('Yakin ingin menghapus tujuan ini?')) return;
     try {
       const res = await fetch(`/api/finance/goal/${id}`, { method: 'DELETE' });
-      if (res.ok) fetchGoals();
-      else alert('Gagal menghapus tujuan');
+      if (res.ok) {
+        fetchGoals();
+        toast.success('Tujuan berhasil dihapus');
+      } else {
+        toast.error('Gagal menghapus tujuan');
+      }
     } catch (err) {
       console.error(err);
+      toast.error('Terjadi kesalahan');
     }
   };
 
@@ -125,10 +135,6 @@ export default function Tujuan() {
 
   return (
     <div className="animate-fade-in pb-12">
-      <div className="mb-8">
-        <h1 className="mb-2 text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-zinc-400">Tujuan Keuangan</h1>
-        <p className="text-sm font-medium text-zinc-400">Kelola target keuanganmu dan pantau progresnya</p>
-      </div>
 
       {/* Add Goal Button */}
       <button 
