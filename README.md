@@ -27,6 +27,3 @@
 
 5. **Selesai!**
    Bot WhatsApp kamu sekarang aktif 24 jam. Kirim pesan `/menu` atau sapa bot-mu untuk memulai!
-
-## 🛡️ Keamanan Data
-File sensitif seperti `.env`, `node_modules/`, `data/`, dan `auth_info_baileys/` secara default telah dimasukkan ke dalam `.gitignore` sehingga dipastikan **kredensial dan data base pribadi kamu tidak akan bocor atau ter-push ke GitHub publik.**
