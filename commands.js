@@ -66,91 +66,54 @@ function getOwnerMenu() {
 │ 
 ╰───────────────╯
 
-💵 *Manajemen Keuangan*
+💵 *Keuangan*
 
-• \`/masuk <jumlah> <kategori> <keterangan>\`
-Catat pemasukan
-Contoh:
-\`/masuk 1.5jt gaji\`
+\`/in\` atau \`/masuk\` _<jml> <kat>_
+Contoh: \`/in 1.5jt gaji\`
 
-• \`/keluar <jumlah> <kategori> <keterangan>\`
-Catat pengeluaran
-Contoh:
-\`/keluar 50k makan\`
+\`/out\` atau \`/keluar\` _<jml> <kat>_
+Contoh: \`/out 50k makan\`
 
-• \`/saldo\`
-Lihat saldo dan ringkasan keuangan
-
-• \`/rekap [hari|minggu|bulan]\`
-Lihat laporan transaksi
-
-• \`/riwayat [jumlah]\`
-Transaksi terakhir
-Contoh:
-\`/riwayat 10\`
-
-• \`/hapus <id>\`
-Hapus transaksi
-
-• \`/ekspor\`
-Export laporan CSV/Excel
+\`/s\` — Lihat saldo
+\`/r [hari|minggu|bulan]\` — Rekap
+\`/h [n]\` — Riwayat transaksi
+\`/del <id>\` — Hapus transaksi
+\`/ex\` — Export CSV
 
 ──────────────────
 
-🎓 *Auto Presensi*
+🎓 *Presensi Pribadi*
 
-• \`/pantau_start\`
-Aktifkan monitoring presensi owner
-
-• \`/pantau_stop\`
-Hentikan monitoring
-
-• \`/pantau_status\`
-Cek status monitoring
+\`/ps\` — Aktifkan monitoring
+\`/pp\` — Hentikan monitoring
+\`/pst\` — Cek status
 
 ──────────────────
 
 👥 *Presensi User*
 
-• \`/daftar <npm> <password>\`
-Simpan akun presensi
-
-• \`/absen_start\`
-Aktifkan auto absen
-
-• \`/absen_stop\`
-Matikan auto absen
-
-• \`/absen_status\`
-Lihat status akun
-
-• \`/logout\`
-Hapus data akun dari bot
+\`/reg <npm> <pass>\` — Daftar
+\`/as\` — Aktifkan auto absen
+\`/ap\` — Matikan auto absen
+\`/ast\` — Status akun
+\`/logout\` — Hapus akun
 
 ──────────────────
 
-🏦 *Cicilan/Hutang*
+🏦 *Cicilan*
 
-• \`/cicilan_tambah <nama> <total> [tgl_jatuh_tempo]\`
-Tambah cicilan baru
-Contoh:
-\`/cicilan_tambah mobil 30000000 28\`
+\`/ct <nama> <total> [tgl]\`
+Contoh: \`/ct mobil 30jt 28\`
 
-• \`/cicilan_setor <id_cicilan> <nominal>\`
-Setor uang cicilan
-Contoh:
-\`/cicilan_setor cicilan-1234 50k\`
+\`/cs <id> <nominal>\`
+Contoh: \`/cs cicilan-xxx 50k\`
 
-• \`/cicilan_list\`
-Lihat daftar cicilan & sisa
-
-• \`/cicilan_hapus <id>\`
-Hapus cicilan
+\`/cl\` — Daftar cicilan
+\`/ch <id>\` — Hapus cicilan
 
 ──────────────────
 
-💡 Tips:
-Klik atau ketik command untuk menjalankan fitur.`;
+💡 Semua command lama masih bisa dipakai.`;
 }
 
 // Menu bantuan Publik (v6)
@@ -161,25 +124,15 @@ function getPublicMenu() {
 
 👥 *Presensi User*
 
-• \`/daftar <npm> <password>\`
-Simpan akun presensi
-
-• \`/absen_start\`
-Aktifkan auto absen
-
-• \`/absen_stop\`
-Matikan auto absen
-
-• \`/absen_status\`
-Lihat status akun
-
-• \`/logout\`
-Hapus data akun dari bot
+\`/reg <npm> <pass>\` — Daftar
+\`/as\` — Aktifkan auto absen
+\`/ap\` — Matikan auto absen
+\`/ast\` — Status akun
+\`/logout\` — Hapus akun
 
 ──────────────────
 
-💡 Tips:
-Klik atau ketik command untuk menjalankan fitur.`;
+💡 Ketik /m untuk melihat menu ini.`;
 }
 
 // Handler untuk /masuk dan /keluar
@@ -593,70 +546,79 @@ export async function handleCommand(messageText, senderJid, isOwner) {
   const args = parts.slice(1);
 
   // Periksa apakah ini command khusus owner/privat
-  const ownerCommands = [
-    '/masuk', '/keluar', '/saldo', '/rekap', '/riwayat', '/hapus', '/ekspor',
-    '/pantau_start', '/pantau_stop', '/pantau_status',
-    '/cicilan_tambah', '/cicilan_setor', '/cicilan_list', '/cicilan_hapus'
-  ];
+  const ownerOnlyCommands = new Set([
+    '/masuk', '/in',
+    '/keluar', '/out',
+    '/saldo', '/s',
+    '/rekap', '/r',
+    '/riwayat', '/h',
+    '/hapus', '/del',
+    '/ekspor', '/ex',
+    '/pantau_start', '/ps',
+    '/pantau_stop', '/pp',
+    '/pantau_status', '/pst',
+    '/cicilan_tambah', '/ct',
+    '/cicilan_setor', '/cs',
+    '/cicilan_list', '/cl',
+    '/cicilan_hapus', '/ch',
+  ]);
 
-  if (ownerCommands.includes(command) && !isOwner) {
+  if (ownerOnlyCommands.has(command) && !isOwner) {
     return { text: `❌ Hak akses ditolak. Perintah ini hanya bisa dijalankan oleh nomor pemilik bot.` };
   }
 
   switch (command) {
-    case '/menu':
-    case '/help':
-    case '/bantuan':
+    // MENU
+    case '/menu': case '/m': case '/help': case '/bantuan':
       return { text: isOwner ? getOwnerMenu() : getPublicMenu() };
 
     // --- KEUANGAN (OWNER ONLY) ---
-    case '/masuk':
+    case '/masuk': case '/in':
       return handleAdd(args, 'pemasukan');
-    case '/keluar':
+    case '/keluar': case '/out':
       return handleAdd(args, 'pengeluaran');
-    case '/saldo':
+    case '/saldo': case '/s':
       return handleShowBalance();
-    case '/rekap':
+    case '/rekap': case '/r':
       return handleShowSummary(args);
-    case '/riwayat':
+    case '/riwayat': case '/h':
       return handleShowHistory(args);
-    case '/hapus':
+    case '/hapus': case '/del':
       return handleDeleteMapping(args);
-    case '/ekspor':
+    case '/ekspor': case '/ex':
       return handleExport();
 
     // --- PRESENSI PRIBADI V5 (OWNER ONLY) ---
-    case '/pantau_start':
+    case '/pantau_start': case '/ps':
       return handleOwnerPantauStart();
-    case '/pantau_stop':
+    case '/pantau_stop': case '/pp':
       return handleOwnerPantauStop();
-    case '/pantau_status':
+    case '/pantau_status': case '/pst':
       return handleOwnerPantauStatus();
 
     // --- PRESENSI UMUM V6 (ALL USERS) ---
-    case '/daftar':
+    case '/daftar': case '/reg':
       return await handleRegister(senderJid, args);
-    case '/absen_start':
+    case '/absen_start': case '/as':
       return handleAbsenStart(senderJid);
-    case '/absen_stop':
+    case '/absen_stop': case '/ap':
       return handleAbsenStop(senderJid);
-    case '/absen_status':
+    case '/absen_status': case '/ast':
       return handleAbsenStatus(senderJid);
-    case '/logout':
-    case '/hapus_akun':
+    case '/logout': case '/hapus_akun':
       return handleLogout(senderJid);
 
     // --- CICILAN/HUTANG (OWNER ONLY) ---
-    case '/cicilan_tambah':
+    case '/cicilan_tambah': case '/ct':
       return handleCicilanTambah(args);
-    case '/cicilan_setor':
+    case '/cicilan_setor': case '/cs':
       return handleCicilanSetor(args);
-    case '/cicilan_list':
+    case '/cicilan_list': case '/cl':
       return handleCicilanList();
-    case '/cicilan_hapus':
+    case '/cicilan_hapus': case '/ch':
       return handleCicilanHapus(args);
 
     default:
-      return { text: `❌ Perintah tidak dikenal: *${command}*\nKetik */menu* untuk melihat daftar perintah.` };
+      return { text: `❌ Perintah tidak dikenal: *${command}*\nKetik */m* untuk melihat daftar perintah.` };
   }
 }

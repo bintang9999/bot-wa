@@ -10,12 +10,14 @@ import Riwayat from './pages/Riwayat';
 import Tujuan from './pages/Tujuan';
 import Cicilan from './pages/Cicilan';
 import AuroraBackground from './components/Finance/AuroraBackground';
+import InstallPrompt from './components/InstallPrompt';
 
 function App() {
   return (
     <Router>
       <AuroraBackground />
       <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+      <InstallPrompt />
       <Sidebar />
       <main className="app-main">
         <Routes>

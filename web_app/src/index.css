@@ -4,6 +4,7 @@
 
 :root {
   --font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
   --bg-dark: #0B0F19;
   --bg-gradient-1: #0B0F19;
   --bg-gradient-2: #0B0F19;
@@ -26,6 +27,10 @@
   --yellow: #eab308;
   --indigo: #6366f1;
   --pink: #ec4899;
+
+  /* Sidebar */
+  --sidebar-width: 256px;
+  --mobile-nav-height: 60px;
 }
 
 :root[data-theme="oled"] {
@@ -70,22 +75,23 @@ body {
   aside.app-sidebar {
     position: sticky;
     top: 0;
-    width: 280px;
-    min-width: 280px;
-    max-width: 280px;
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    max-width: var(--sidebar-width);
     height: 100vh;
     flex-shrink: 0;
     overflow-y: auto;
     border-right: 1px solid rgba(255, 255, 255, 0.05);
-    background: rgba(9, 9, 11, 0.5);
-    backdrop-filter: blur(20px);
-    padding: 2rem;
+    background: rgba(8, 10, 18, 0.7);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    padding: 1rem 0.75rem;
   }
 
   main.app-main {
     flex: 1;
     min-width: 0;
-    padding: 2.5rem 3rem;
+    padding: 2rem 2.5rem;
     overflow-y: auto;
     display: flex;
     justify-content: center;
@@ -109,16 +115,20 @@ body {
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 64px;
+    height: var(--mobile-nav-height);
     z-index: 50;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-    background-color: #0B0F19;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(8, 10, 18, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    /* iOS safe area */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   main.app-main {
     width: 100%;
-    padding: 1.5rem;
-    padding-bottom: 5.5rem;
+    padding: 1.25rem 1rem;
+    padding-bottom: calc(var(--mobile-nav-height) + 1rem);
     overflow-x: hidden;
     overflow-y: auto;
     flex: 1;
@@ -415,21 +425,20 @@ tr:hover td {
   box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
 }
 
-/* Terminal Logs */
+/* Terminal Logs (legacy support) */
 .terminal {
-  background: #000;
-  border: 1px solid #333;
-  border-radius: 12px;
-  padding: 1.5rem;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-size: 0.875rem;
-  color: #34d399; /* hacker green */
-  height: calc(100vh - 200px);
-  min-height: 500px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: #34d399;
+  height: calc(100vh - 220px);
+  min-height: 400px;
   overflow: auto;
-  box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
-  white-space: pre;
-  line-height: 1.4;
+  box-shadow: inset 0 0 30px rgba(0,0,0,0.4);
+  line-height: 1.6;
 }
 
 .terminal-line {
@@ -439,6 +448,25 @@ tr:hover td {
 
 .terminal-error {
   color: #f87171;
+}
+
+/* Global Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.35s ease both;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* Modal */
