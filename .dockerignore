@@ -1,4 +1,7 @@
 node_modules
+web_app/node_modules
+web_app/dist
+web_app/dev-dist
 npm-debug.log
 auth_info_baileys
 data

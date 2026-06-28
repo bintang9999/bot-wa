@@ -1,25 +1,32 @@
 FROM node:20-alpine
 
-# Pasang tzdata untuk sinkronisasi waktu & perkakas dasar
-RUN apk add --no-cache tzdata
+# Pasang tzdata untuk sinkronisasi waktu & build tools untuk native modules
+RUN apk add --no-cache tzdata python3 make g++
 
 # Set zona waktu ke Asia/Jakarta agar log waktu sesuai
 ENV TZ=Asia/Jakarta
 
 WORKDIR /app
 
-# Salin berkas package
+# Salin berkas package backend
 COPY package*.json ./
 
-# Pasang dependensi
+# Pasang dependensi backend
 RUN npm install
 
-# Salin semua berkas proyek
+# Salin berkas package frontend (layer caching terpisah)
+COPY web_app/package*.json ./web_app/
+
+# Pasang dependensi frontend
+WORKDIR /app/web_app
+RUN npm install
+
+# Kembali ke root, salin semua berkas proyek
+WORKDIR /app
 COPY . .
 
 # Build frontend
 WORKDIR /app/web_app
-RUN npm install
 RUN npm run build
 WORKDIR /app
 
