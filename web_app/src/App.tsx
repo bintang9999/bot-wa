@@ -9,6 +9,7 @@ import Kategori from './pages/Kategori';
 import Riwayat from './pages/Riwayat';
 import Tujuan from './pages/Tujuan';
 import Cicilan from './pages/Cicilan';
+import Tugas from './pages/Tugas';
 import AuroraBackground from './components/Finance/AuroraBackground';
 import InstallPrompt from './components/InstallPrompt';
 
@@ -28,6 +29,7 @@ function App() {
           <Route path="/riwayat" element={<Riwayat />} />
           <Route path="/tujuan" element={<Tujuan />} />
           <Route path="/cicilan" element={<Cicilan />} />
+          <Route path="/tugas" element={<Tugas />} />
           <Route path="/logs" element={<Logs />} />
         </Routes>
       </main>

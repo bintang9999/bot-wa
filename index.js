@@ -6,7 +6,7 @@ import express from 'express';
 import { handleCommand } from './commands.js';
 import { startPresensiMonitoring, getOwnerDb, getV6Db } from './presensi.js';
 import { askGemini } from './ai.js';
-import { getBalance, getSummary, getTransactions, addTransaction, deleteTransaction, getEWallets, addEWallet, deleteEWallet, getCategories, addCategory, deleteCategory, getSixMonthsTrend, getGoals, addGoal, fundGoal, deleteGoal, getExportCSV, getCicilans, addCicilan, setorCicilan, deleteCicilan } from './database.js';
+import { getBalance, getSummary, getTransactions, addTransaction, deleteTransaction, getEWallets, addEWallet, deleteEWallet, getCategories, addCategory, deleteCategory, getSixMonthsTrend, getGoals, addGoal, fundGoal, deleteGoal, getExportCSV, getCicilans, addCicilan, setorCicilan, deleteCicilan, getTasks, addTask, updateTask, toggleTask, deleteTask } from './database.js';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
@@ -248,6 +248,48 @@ app.get('/api/finance/export', (req, res) => {
     res.send(csv);
   } else {
     res.status(400).json({ error: 'Tidak ada transaksi untuk diekspor' });
+  }
+});
+// ==========================================
+// TASK MANAGEMENT API
+// ==========================================
+app.get('/api/tasks', (req, res) => {
+  res.json(getTasks());
+});
+
+app.post('/api/tasks', (req, res) => {
+  const { title, description, priority, dueDate, category } = req.body;
+  if (!title) {
+    return res.status(400).json({ error: 'Judul tugas wajib diisi' });
+  }
+  const task = addTask(title, description, priority, dueDate, category);
+  res.json({ success: true, task });
+});
+
+app.put('/api/tasks/:id', (req, res) => {
+  const task = updateTask(req.params.id, req.body);
+  if (task) {
+    res.json({ success: true, task });
+  } else {
+    res.status(404).json({ error: 'Tugas tidak ditemukan' });
+  }
+});
+
+app.patch('/api/tasks/:id/toggle', (req, res) => {
+  const task = toggleTask(req.params.id);
+  if (task) {
+    res.json({ success: true, task });
+  } else {
+    res.status(404).json({ error: 'Tugas tidak ditemukan' });
+  }
+});
+
+app.delete('/api/tasks/:id', (req, res) => {
+  const success = deleteTask(req.params.id);
+  if (success) {
+    res.json({ success: true });
+  } else {
+    res.status(404).json({ error: 'Tugas tidak ditemukan' });
   }
 });
 // ==========================================

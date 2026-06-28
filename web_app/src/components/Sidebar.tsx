@@ -13,6 +13,7 @@ import {
   CreditCard,
   Terminal,
   MessageCircle,
+  ClipboardList,
 } from 'lucide-react';
 
 const menus = [
@@ -23,6 +24,7 @@ const menus = [
   { to: '/riwayat', label: 'Riwayat', icon: History, end: false },
   { to: '/tujuan', label: 'Tujuan', icon: Target, end: false },
   { to: '/cicilan', label: 'Cicilan', icon: CreditCard, end: false },
+  { to: '/tugas', label: 'Tugas', icon: ClipboardList, end: false },
   { to: '/logs', label: 'Logs', icon: Terminal, end: false },
 ];
 

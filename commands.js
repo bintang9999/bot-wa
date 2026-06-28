@@ -9,7 +9,11 @@ import {
   getCicilans,
   addCicilan,
   setorCicilan,
-  deleteCicilan
+  deleteCicilan,
+  getTasks,
+  addTask,
+  toggleTask,
+  deleteTask
 } from './database.js';
 
 import { 
@@ -110,6 +114,17 @@ Contoh: \`/cs cicilan-xxx 50k\`
 
 \`/cl\` — Daftar cicilan
 \`/ch <id>\` — Hapus cicilan
+
+──────────────────
+
+📋 *Tugas*
+
+\`/tt <judul>\` — Tambah tugas
+Contoh: \`/tt Beli buku\`
+
+\`/tl\` — Daftar tugas
+\`/td <id>\` — Tandai selesai/buka
+\`/th <id>\` — Hapus tugas
 
 ──────────────────
 
@@ -536,6 +551,94 @@ function handleCicilanHapus(args) {
   }
 }
 
+// --- TUGAS (OWNER ONLY) ---
+function handleTugasTambah(args) {
+  if (args.length === 0) {
+    return {
+      text: `⚠️ Format salah! Gunakan:\n*/tugas_tambah <judul>*\n\nContoh:\n\`/tt Beli buku pelajaran\``
+    };
+  }
+
+  const title = args.join(' ');
+  const task = addTask(title, '', 'medium', null, 'Umum');
+
+  return {
+    text: `✅ *Tugas Baru Ditambahkan!*\n\n` +
+          `🆔 ID: \`${task.id}\`\n` +
+          `📋 Judul: *${task.title}*\n` +
+          `⏳ Status: Belum selesai\n\n` +
+          `_Gunakan \`/td ${task.id}\` untuk menandai selesai._`
+  };
+}
+
+function handleTugasList() {
+  const tasks = getTasks();
+  if (tasks.length === 0) {
+    return { text: `📋 Belum ada tugas terdaftar.` };
+  }
+
+  const active = tasks.filter(t => !t.completed);
+  const completed = tasks.filter(t => t.completed);
+
+  let text = `=== 📋 DAFTAR TUGAS ===\n\n`;
+
+  if (active.length > 0) {
+    text += `*⏳ Belum Selesai (${active.length})*\n\n`;
+    active.forEach(t => {
+      const priorityIcon = t.priority === 'high' ? '🔴' : t.priority === 'medium' ? '🟡' : '🔵';
+      text += `${priorityIcon} *${t.title}*\n`;
+      text += `  ID: \`${t.id}\`\n`;
+      if (t.dueDate) {
+        const daysLeft = Math.ceil((new Date(t.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+        text += `  📅 ${daysLeft > 0 ? `${daysLeft} hari lagi` : 'Terlambat!'}\n`;
+      }
+      text += `\n`;
+    });
+  }
+
+  if (completed.length > 0) {
+    text += `*✅ Selesai (${completed.length})*\n\n`;
+    completed.forEach(t => {
+      text += `✅ ~${t.title}~\n`;
+      text += `  ID: \`${t.id}\`\n\n`;
+    });
+  }
+
+  return { text: text.trim() };
+}
+
+function handleTugasDone(args) {
+  if (args.length === 0) {
+    return { text: `⚠️ Format salah! Gunakan: */tugas_done <id_tugas>*` };
+  }
+
+  const id = args[0].trim();
+  const task = toggleTask(id);
+  if (!task) {
+    return { text: `❌ Tugas dengan ID \`${id}\` tidak ditemukan. Gunakan */tl* untuk melihat daftar.` };
+  }
+
+  if (task.completed) {
+    return { text: `✅ *Tugas Selesai!* 🎉\n\n📋 *${task.title}*\nSelesai pada: ${new Date(task.completedAt).toLocaleString('id-ID')}` };
+  } else {
+    return { text: `🔄 *Tugas Dibuka Kembali*\n\n📋 *${task.title}*\nStatus: ⏳ Belum selesai` };
+  }
+}
+
+function handleTugasHapus(args) {
+  if (args.length === 0) {
+    return { text: `⚠️ Format salah! Gunakan: */tugas_hapus <id_tugas>*` };
+  }
+
+  const id = args[0].trim();
+  const success = deleteTask(id);
+  if (success) {
+    return { text: `✅ Tugas \`${id}\` berhasil dihapus.` };
+  } else {
+    return { text: `❌ Tugas dengan ID \`${id}\` tidak ditemukan.` };
+  }
+}
+
 // Main Command Handler
 export async function handleCommand(messageText, senderJid, isOwner) {
   const trimmed = messageText.trim();
@@ -561,6 +664,10 @@ export async function handleCommand(messageText, senderJid, isOwner) {
     '/cicilan_setor', '/cs',
     '/cicilan_list', '/cl',
     '/cicilan_hapus', '/ch',
+    '/tugas_tambah', '/tt',
+    '/tugas_list', '/tl',
+    '/tugas_done', '/td',
+    '/tugas_hapus', '/th',
   ]);
 
   if (ownerOnlyCommands.has(command) && !isOwner) {
@@ -617,6 +724,16 @@ export async function handleCommand(messageText, senderJid, isOwner) {
       return handleCicilanList();
     case '/cicilan_hapus': case '/ch':
       return handleCicilanHapus(args);
+
+    // --- TUGAS (OWNER ONLY) ---
+    case '/tugas_tambah': case '/tt':
+      return handleTugasTambah(args);
+    case '/tugas_list': case '/tl':
+      return handleTugasList();
+    case '/tugas_done': case '/td':
+      return handleTugasDone(args);
+    case '/tugas_hapus': case '/th':
+      return handleTugasHapus(args);
 
     default:
       return { text: `❌ Perintah tidak dikenal: *${command}*\nKetik */m* untuk melihat daftar perintah.` };

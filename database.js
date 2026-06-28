@@ -10,7 +10,7 @@ if (!fs.existsSync(DB_DIR)) {
 }
 
 if (!fs.existsSync(DB_PATH)) {
-  fs.writeFileSync(DB_PATH, JSON.stringify({ transactions: [], ewallets: [], categories: [], goals: [], cicilans: [] }, null, 2));
+  fs.writeFileSync(DB_PATH, JSON.stringify({ transactions: [], ewallets: [], categories: [], goals: [], cicilans: [], tasks: [] }, null, 2));
 }
 
 // Fungsi untuk membaca database
@@ -22,10 +22,11 @@ function readDB() {
     if (!parsed.categories) parsed.categories = [];
     if (!parsed.goals) parsed.goals = [];
     if (!parsed.cicilans) parsed.cicilans = [];
+    if (!parsed.tasks) parsed.tasks = [];
     return parsed;
   } catch (error) {
     console.error('Gagal membaca database, membuat data kosong:', error);
-    return { transactions: [], ewallets: [], categories: [], goals: [], cicilans: [] };
+    return { transactions: [], ewallets: [], categories: [], goals: [], cicilans: [], tasks: [] };
   }
 }
 
@@ -429,6 +430,89 @@ export function deleteCicilan(id) {
   const initLen = db.cicilans.length;
   db.cicilans = db.cicilans.filter(c => c.id !== id);
   if (db.cicilans.length < initLen) {
+    writeDB(db);
+    return true;
+  }
+  return false;
+}
+
+// =============================================
+// TASK MANAGEMENT (Tugas)
+// =============================================
+
+// Mendapatkan daftar Tugas
+export function getTasks() {
+  const db = readDB();
+  return (db.tasks || []).sort((a, b) => {
+    // Urutkan: belum selesai dulu, lalu berdasarkan prioritas (high > medium > low), lalu tanggal terbaru
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    const priorityOrder = { high: 0, medium: 1, low: 2 };
+    if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
+    }
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
+}
+
+// Menambah Tugas Baru
+export function addTask(title, description, priority, dueDate, category) {
+  const db = readDB();
+  if (!db.tasks) db.tasks = [];
+  const newTask = {
+    id: `task-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    title,
+    description: description || '',
+    priority: priority || 'medium',
+    dueDate: dueDate || null,
+    category: category || 'Umum',
+    completed: false,
+    createdAt: new Date().toISOString(),
+    completedAt: null
+  };
+  db.tasks.push(newTask);
+  writeDB(db);
+  return newTask;
+}
+
+// Mengupdate Tugas
+export function updateTask(id, updates) {
+  const db = readDB();
+  if (!db.tasks) return null;
+  const idx = db.tasks.findIndex(t => t.id === id);
+  if (idx === -1) return null;
+
+  const allowed = ['title', 'description', 'priority', 'dueDate', 'category'];
+  for (const key of allowed) {
+    if (updates[key] !== undefined) {
+      db.tasks[idx][key] = updates[key];
+    }
+  }
+
+  writeDB(db);
+  return db.tasks[idx];
+}
+
+// Toggle status selesai Tugas
+export function toggleTask(id) {
+  const db = readDB();
+  if (!db.tasks) return null;
+  const idx = db.tasks.findIndex(t => t.id === id);
+  if (idx === -1) return null;
+
+  db.tasks[idx].completed = !db.tasks[idx].completed;
+  db.tasks[idx].completedAt = db.tasks[idx].completed ? new Date().toISOString() : null;
+
+  writeDB(db);
+  return db.tasks[idx];
+}
+
+// Menghapus Tugas
+export function deleteTask(id) {
+  const db = readDB();
+  if (!db.tasks) return false;
+  const initLen = db.tasks.length;
+  db.tasks = db.tasks.filter(t => t.id !== id);
+  if (db.tasks.length < initLen) {
     writeDB(db);
     return true;
   }
