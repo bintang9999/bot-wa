@@ -1,33 +1,18 @@
-FROM node:20-alpine
-
-# Pasang tzdata untuk sinkronisasi waktu & build tools untuk native modules
-RUN apk add --no-cache tzdata python3 make g++
+FROM node:20-slim
 
 # Set zona waktu ke Asia/Jakarta agar log waktu sesuai
 ENV TZ=Asia/Jakarta
 
 WORKDIR /app
 
-# Salin berkas package backend
+# Salin berkas package bot
 COPY package*.json ./
 
-# Pasang dependensi backend
+# Pasang dependensi bot
+# Menggunakan node-slim akan mendownload pre-built binary untuk sqlite3 (jauh lebih cepat dari alpine)
 RUN npm install
 
-# Salin berkas package frontend (layer caching terpisah)
-COPY web_app/package*.json ./web_app/
-
-# Pasang dependensi frontend
-WORKDIR /app/web_app
-RUN npm install
-
-# Kembali ke root, salin semua berkas proyek
-WORKDIR /app
+# Salin semua berkas proyek bot
 COPY . .
-
-# Build frontend
-WORKDIR /app/web_app
-RUN npm run build
-WORKDIR /app
 
 CMD ["node", "index.js"]

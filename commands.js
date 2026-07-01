@@ -712,6 +712,31 @@ export async function handleReportState(msg, messageText, senderJid) {
         return { text: "❌ Terjadi kesalahan saat memproses gambar laporan. Silakan coba lagi." };
     }
   }
+
+  if (state.step === 'FOTO_AI') {
+    const imageMessage = msg.message?.imageMessage || msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage;
+    if (!imageMessage) {
+        return { text: "⚠️ Anda harus mengirimkan *FOTO* kerusakan tersebut." };
+    }
+    
+    try {
+        const buffer = await downloadMediaMessage(msg, 'buffer', { });
+        const filename = 'wa_' + Date.now() + '.jpg';
+        const filepath = path.join(uploadDir, filename);
+        fs.writeFileSync(filepath, buffer);
+        
+        const kontak = senderJid.split('@')[0];
+        const nama = msg.pushName || kontak;
+        
+        const result = createGuestReport(nama, kontak, state.judul, state.deskripsi, state.lokasi, filename);
+        delete reportStates[senderJid];
+        
+        return { text: `✅ *Laporan Berhasil Dibuat!*\n\nKode Laporan: *${result.kode_laporan}*\n\nTerima kasih telah melaporkan kerusakan. Admin kami akan segera menindaklanjutinya.` };
+    } catch(e) {
+        console.error("Gagal mendownload gambar:", e);
+        return { text: "❌ Terjadi kesalahan saat memproses gambar laporan. Silakan coba lagi." };
+    }
+  }
 }
 
 // Main Command Handler
@@ -754,6 +779,19 @@ export async function handleCommand(messageText, senderJid, isOwner) {
     case '/lapor':
       reportStates[senderJid] = { step: 'LOKASI' };
       return { text: "📢 *Mulai Pelaporan Kerusakan*\n\nSilakan kirimkan *Lokasi Detail* dari kerusakan tersebut.\nContoh: _Gedung A Lantai 2, Ruang Kelas A201_\n\n_(Ketik /batal untuk membatalkan)_" };
+
+    case '/lapor_ai':
+      const aiData = args.join(' ').split('|').map(s => s.trim());
+      if (aiData.length >= 3) {
+          reportStates[senderJid] = { 
+              step: 'FOTO_AI',
+              lokasi: aiData[0],
+              judul: aiData[1],
+              deskripsi: aiData[2]
+          };
+          return { text: `📋 *Data Laporan Dicatat!*\n\n📍 Lokasi: *${aiData[0]}*\n📌 Laporan: *${aiData[1]}*\n\n📸 Langkah terakhir: Silakan kirimkan **FOTO** kerusakannya ke chat ini (tanpa perlu repot mengetik caption lagi).\n\n_(Ketik /batal jika ingin membatalkan)_` };
+      }
+      return null;
 
     case '/menu': case '/m': case '/help': case '/bantuan':
       return { text: isOwner ? getOwnerMenu() : getPublicMenu() };
