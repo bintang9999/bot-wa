@@ -1,3 +1,20 @@
+import { downloadMediaMessage } from '@whiskeysockets/baileys';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { createGuestReport } from './campuscare.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadDir = path.resolve(__dirname, '../uploads');
+
+// Buat folder uploads jika belum ada
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+export const reportStates = {};
+
 import { 
   addTransaction, 
   getTransactions, 
@@ -144,6 +161,12 @@ function getPublicMenu() {
 \`/ap\` — Matikan auto absen
 \`/ast\` — Status akun
 \`/logout\` — Hapus akun
+
+──────────────────
+
+📢 *Pelaporan Kerusakan*
+
+\`/lapor\` — Mulai buat laporan kerusakan fasilitas
 
 ──────────────────
 
@@ -640,6 +663,58 @@ function handleTugasHapus(args) {
 }
 
 // Main Command Handler
+export async function handleReportState(msg, messageText, senderJid) {
+  const state = reportStates[senderJid];
+  if (!state) return null;
+
+  if (messageText.toLowerCase() === '/batal') {
+    delete reportStates[senderJid];
+    return { text: "❌ Pembuatan laporan dibatalkan." };
+  }
+
+  if (state.step === 'LOKASI') {
+    if (!messageText) return { text: "⚠️ Tolong kirimkan lokasi kerusakan dalam bentuk teks." };
+    state.lokasi = messageText;
+    state.step = 'FOTO';
+    return { text: "📍 Lokasi tersimpan.\n\nSelanjutnya, silakan kirimkan *FOTO* kerusakan dengan *Judul Laporan* di baris pertama dan *Deskripsi* di baris selanjutnya pada *caption* foto.\n\nContoh Caption:\nAC Rusak\nAir AC menetes sangat deras dari pagi.\n\n_(Ketik /batal untuk membatalkan)_" };
+  }
+
+  if (state.step === 'FOTO') {
+    const imageMessage = msg.message?.imageMessage || msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage;
+    if (!imageMessage) {
+        return { text: "⚠️ Anda harus mengirimkan *FOTO* beserta caption (Judul & Deskripsi)." };
+    }
+    
+    let caption = msg.message?.imageMessage?.caption || messageText;
+    if (!caption || caption.trim() === '') {
+        return { text: "⚠️ Caption (Judul & Deskripsi) tidak boleh kosong." };
+    }
+    
+    const lines = caption.split('\\n').map(l => l.trim()).filter(l => l !== '');
+    const judul = lines[0];
+    const deskripsi = lines.slice(1).join('\\n') || '-';
+
+    try {
+        const buffer = await downloadMediaMessage(msg, 'buffer', { });
+        const filename = 'wa_' + Date.now() + '.jpg';
+        const filepath = path.join(uploadDir, filename);
+        fs.writeFileSync(filepath, buffer);
+        
+        const kontak = senderJid.split('@')[0];
+        const nama = msg.pushName || kontak;
+        
+        const result = createGuestReport(nama, kontak, judul, deskripsi, state.lokasi, filename);
+        delete reportStates[senderJid];
+        
+        return { text: `✅ *Laporan Berhasil Dibuat!*\n\nKode Laporan: *${result.kode_laporan}*\n\nTerima kasih telah melaporkan kerusakan. Admin kami akan segera menindaklanjutinya.` };
+    } catch(e) {
+        console.error("Gagal mendownload gambar:", e);
+        return { text: "❌ Terjadi kesalahan saat memproses gambar laporan. Silakan coba lagi." };
+    }
+  }
+}
+
+// Main Command Handler
 export async function handleCommand(messageText, senderJid, isOwner) {
   const trimmed = messageText.trim();
   if (!trimmed.startsWith('/')) return null;
@@ -676,6 +751,10 @@ export async function handleCommand(messageText, senderJid, isOwner) {
 
   switch (command) {
     // MENU
+    case '/lapor':
+      reportStates[senderJid] = { step: 'LOKASI' };
+      return { text: "📢 *Mulai Pelaporan Kerusakan*\n\nSilakan kirimkan *Lokasi Detail* dari kerusakan tersebut.\nContoh: _Gedung A Lantai 2, Ruang Kelas A201_\n\n_(Ketik /batal untuk membatalkan)_" };
+
     case '/menu': case '/m': case '/help': case '/bantuan':
       return { text: isOwner ? getOwnerMenu() : getPublicMenu() };
 

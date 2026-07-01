@@ -3,7 +3,7 @@ import pino from 'pino';
 import qrcode from 'qrcode-terminal';
 import dotenv from 'dotenv';
 import express from 'express';
-import { handleCommand } from './commands.js';
+import { handleCommand, handleReportState, reportStates } from './commands.js';
 import { startPresensiMonitoring, getOwnerDb, getV6Db } from './presensi.js';
 import { askGemini } from './ai.js';
 import { getBalance, getSummary, getTransactions, addTransaction, deleteTransaction, getEWallets, addEWallet, deleteEWallet, getCategories, addCategory, deleteCategory, getSixMonthsTrend, getGoals, addGoal, fundGoal, deleteGoal, getExportCSV, getCicilans, addCicilan, setorCicilan, deleteCicilan, getTasks, addTask, updateTask, toggleTask, deleteTask } from './database.js';
@@ -458,6 +458,23 @@ async function connectToWhatsApp() {
       // Untuk orang lain, dariMe = true berarti pesan balasan dari bot kita sendiri ke orang tersebut.
       if (msg.key.fromMe && !isOwnerChat) {
         continue;
+      }
+
+      // 0. Cek State Laporan
+      if (reportStates[senderJid]) {
+        console.log(`[Proses State Laporan] ${new Date().toLocaleTimeString('id-ID')} | JID: ${senderJid}`);
+        try {
+          await safeSendPresence('composing', senderJid);
+          const reply = await handleReportState(msg, messageText, senderJid);
+          if (reply && reply.text) {
+             await safeSendMessage(senderJid, { text: reply.text }, { quoted: msg });
+          }
+        } catch (err) {
+          console.error('Error saat memproses state laporan:', err);
+        } finally {
+          await safeSendPresence('paused', senderJid);
+        }
+        continue; // jangan proses sebagai command lain atau AI
       }
 
       // 1. Kasus Perintah (dimulai dengan '/')
