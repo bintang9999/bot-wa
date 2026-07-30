@@ -400,7 +400,8 @@ export function addCicilan(name, totalAmount, dueDate) {
     totalAmount: parseFloat(totalAmount),
     collected: 0,
     dueDate: dueDate || 28,
-    status: 'active'
+    status: 'active',
+    payments: []
   };
   db.cicilans.push(newCicilan);
   writeDB(db);
@@ -414,13 +415,31 @@ export function setorCicilan(id, amount) {
   const idx = db.cicilans.findIndex(c => c.id === id);
   if (idx === -1) return null;
   
-  db.cicilans[idx].collected += parseFloat(amount);
+  const parsedAmount = parseFloat(amount);
+  db.cicilans[idx].collected += parsedAmount;
+  
+  // Catat riwayat pembayaran
+  if (!db.cicilans[idx].payments) db.cicilans[idx].payments = [];
+  db.cicilans[idx].payments.push({
+    amount: parsedAmount,
+    date: new Date().toISOString()
+  });
+  
   if (db.cicilans[idx].collected >= db.cicilans[idx].totalAmount) {
     db.cicilans[idx].status = 'completed';
   }
   
   writeDB(db);
   return db.cicilans[idx];
+}
+
+// Mendapatkan riwayat pembayaran cicilan
+export function getCicilanPayments(id) {
+  const db = readDB();
+  if (!db.cicilans) return null;
+  const cicilan = db.cicilans.find(c => c.id === id);
+  if (!cicilan) return null;
+  return cicilan.payments || [];
 }
 
 // Menghapus Cicilan

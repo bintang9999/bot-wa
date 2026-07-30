@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, CheckCircle2, Plus, Trash2, X } from 'lucide-react';
+import { CreditCard, CheckCircle2, Plus, Trash2, X, Calculator, ArrowLeft, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+interface Payment { amount: number; date: string; }
 interface Cicilan {
-  id: string;
-  name: string;
-  totalAmount: number;
-  collected: number;
-  dueDate: number;
-  status: 'active' | 'completed';
+  id: string; name: string; totalAmount: number; collected: number;
+  dueDate: number; status: 'active' | 'completed'; payments?: Payment[];
 }
 
 export default function Cicilan() {
@@ -17,6 +14,11 @@ export default function Cicilan() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedCicilanId, setSelectedCicilanId] = useState<string | null>(null);
   const [setorAmount, setSetorAmount] = useState('');
+  const [detailCicilan, setDetailCicilan] = useState<Cicilan | null>(null);
+  const [detailPayments, setDetailPayments] = useState<Payment[]>([]);
+  const [dailyAmount, setDailyAmount] = useState('');
+  const [calMonth, setCalMonth] = useState(new Date().getMonth());
+  const [calYear, setCalYear] = useState(new Date().getFullYear());
 
   const [addFormData, setAddFormData] = useState({
     name: '',
@@ -123,9 +125,148 @@ export default function Cicilan() {
     setIsSetorModalOpen(true);
   };
 
+  const openDetail = async (cicilan: Cicilan) => {
+    setDetailCicilan(cicilan);
+    setDailyAmount('');
+    setCalMonth(new Date().getMonth());
+    setCalYear(new Date().getFullYear());
+    try {
+      const res = await fetch(`/api/finance/cicilan/${cicilan.id}/payments`);
+      const data = await res.json();
+      setDetailPayments(Array.isArray(data) ? data : []);
+    } catch { setDetailPayments([]); }
+  };
+
+  // Calendar helpers
+  const monthNames = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const dayNames = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+  const getDaysInMonth = (m: number, y: number) => new Date(y, m + 1, 0).getDate();
+  const getFirstDay = (m: number, y: number) => new Date(y, m, 1).getDay();
+  const paymentDates = new Set(detailPayments.map(p => new Date(p.date).toDateString()));
+
+  // Detail view
+  if (detailCicilan) {
+    const c = detailCicilan;
+    const remaining = c.totalAmount - c.collected;
+    const progress = (c.collected / c.totalAmount) * 100;
+    const rawD = dailyAmount.replace(/\./g, '');
+    const dNum = parseInt(rawD) || 0;
+    const daysNeeded = dNum > 0 ? Math.ceil(remaining / dNum) : 0;
+    const payoffDate = daysNeeded > 0 ? (() => { const d = new Date(); d.setDate(d.getDate() + daysNeeded); return d; })() : null;
+    const daysInMonth = getDaysInMonth(calMonth, calYear);
+    const firstDay = getFirstDay(calMonth, calYear);
+    const today = new Date();
+
+    return (
+      <div className="animate-fade-in pb-12">
+        <button onClick={() => setDetailCicilan(null)} className="flex items-center gap-2 text-zinc-400 hover:text-white mb-6 transition-colors cursor-pointer">
+          <ArrowLeft size={18} /><span className="text-sm font-bold">Kembali</span>
+        </button>
+
+        <div className="glass-premium rounded-3xl p-6 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border-2 border-indigo-500/40 flex items-center justify-center">
+              <CreditCard size={20} className="text-indigo-500" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white">{c.name}</h2>
+              <p className="text-xs text-indigo-400">Jatuh Tempo: Tgl {c.dueDate}</p>
+            </div>
+          </div>
+          <div className="flex justify-between items-end mb-2">
+            <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Progress</span>
+            <span className="text-xl font-black text-white">{Math.round(progress)}%</span>
+          </div>
+          <div className="relative w-full h-3 bg-black/40 rounded-full overflow-hidden border border-white/5">
+            <div className="absolute top-0 left-0 h-full blur-md opacity-60 bg-indigo-500" style={{ width: `${Math.min(progress, 100)}%` }} />
+            <div className="relative h-full bg-gradient-to-r from-indigo-600 via-violet-500 to-fuchsia-500 rounded-full transition-all duration-1000" style={{ width: `${Math.min(progress, 100)}%` }} />
+          </div>
+          <div className="grid grid-cols-3 gap-3 mt-4 p-3 bg-white/5 rounded-xl border border-white/5">
+            <div className="text-center"><p className="text-xs text-zinc-500 mb-1">Terkumpul</p><p className="text-xs font-bold text-white">{formatCurrency(c.collected)}</p></div>
+            <div className="text-center"><p className="text-xs text-zinc-500 mb-1">Total</p><p className="text-xs font-bold text-white">{formatCurrency(c.totalAmount)}</p></div>
+            <div className="text-center"><p className="text-xs text-zinc-500 mb-1">Kurang</p><p className={`text-xs font-bold ${remaining > 0 ? 'text-red-400' : 'text-emerald-400'}`}>{formatCurrency(remaining)}</p></div>
+          </div>
+        </div>
+
+        {/* Estimasi Calculator */}
+        {remaining > 0 && (
+          <div className="glass-premium rounded-3xl p-6 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Calculator size={16} className="text-indigo-400" />
+              <h3 className="text-sm font-bold text-white">Estimasi Lunas</h3>
+            </div>
+            <label className="block text-[10px] text-zinc-400 mb-2 uppercase tracking-wider font-bold">Setor per hari (Rp)</label>
+            <input type="text" inputMode="numeric" value={dailyAmount} onChange={(e) => {
+              const v = e.target.value.replace(/\D/g, '');
+              setDailyAmount(v ? new Intl.NumberFormat('id-ID').format(parseInt(v)) : '');
+            }} placeholder="Masukkan nominal" className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all mb-3" />
+            <div className="flex flex-wrap gap-2 mb-4">
+              {[10000, 20000, 30000, 50000].map(a => (
+                <button key={a} onClick={() => setDailyAmount(new Intl.NumberFormat('id-ID').format(a))}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border cursor-pointer transition-all ${dNum === a ? 'bg-indigo-500/30 border-indigo-500/50 text-indigo-300' : 'bg-white/5 border-white/10 text-zinc-400 hover:bg-white/10'}`}>
+                  {a/1000}k
+                </button>
+              ))}
+            </div>
+            {payoffDate && (
+              <div className="p-4 bg-gradient-to-r from-indigo-500/10 to-violet-500/10 rounded-xl border border-indigo-500/20">
+                <p className="text-sm font-bold text-white">📅 Lunas tanggal <span className="text-indigo-400">{payoffDate.getDate()} {monthNames[payoffDate.getMonth()]} {payoffDate.getFullYear()}</span></p>
+                <p className="text-xs text-zinc-400 mt-1">⏱️ <span className="text-indigo-300 font-semibold">{daysNeeded} hari</span> lagi dengan setor {formatCurrency(dNum)}/hari</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Calendar */}
+        <div className="glass-premium rounded-3xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <button onClick={() => { if (calMonth === 0) { setCalMonth(11); setCalYear(calYear - 1); } else setCalMonth(calMonth - 1); }} className="p-2 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer">‹</button>
+            <h3 className="text-sm font-bold text-white">{monthNames[calMonth]} {calYear}</h3>
+            <button onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(calYear + 1); } else setCalMonth(calMonth + 1); }} className="p-2 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer">›</button>
+          </div>
+          <div className="grid grid-cols-7 gap-1 mb-2">
+            {dayNames.map(d => <div key={d} className="text-center text-[10px] text-zinc-500 font-bold py-1">{d}</div>)}
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {Array.from({ length: firstDay }).map((_, i) => <div key={`e-${i}`} />)}
+            {Array.from({ length: daysInMonth }).map((_, i) => {
+              const day = i + 1;
+              const dateStr = new Date(calYear, calMonth, day).toDateString();
+              const hasPay = paymentDates.has(dateStr);
+              const isToday = today.getDate() === day && today.getMonth() === calMonth && today.getFullYear() === calYear;
+              const dayPayments = detailPayments.filter(p => new Date(p.date).toDateString() === dateStr);
+              const totalPaid = dayPayments.reduce((s, p) => s + p.amount, 0);
+              return (
+                <div key={day} className={`relative aspect-square flex flex-col items-center justify-center rounded-lg text-xs transition-all ${hasPay ? 'bg-emerald-500/20 border border-emerald-500/30' : isToday ? 'bg-indigo-500/10 border border-indigo-500/30' : 'bg-white/[0.02] border border-transparent hover:border-white/10'}`} title={hasPay ? `Setor ${formatCurrency(totalPaid)}` : ''}>
+                  <span className={`font-semibold ${hasPay ? 'text-emerald-400' : isToday ? 'text-indigo-400' : 'text-zinc-400'}`}>{day}</span>
+                  {hasPay && <Check size={10} className="text-emerald-400 absolute bottom-0.5" />}
+                </div>
+              );
+            })}
+          </div>
+          {detailPayments.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-white/5">
+              <p className="text-[10px] text-zinc-400 uppercase tracking-wider font-bold mb-2">Riwayat Setor</p>
+              <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                {detailPayments.slice().reverse().map((p, i) => {
+                  const d = new Date(p.date);
+                  return (
+                    <div key={i} className="flex justify-between text-xs px-2 py-1.5 bg-black/20 rounded-lg border border-white/5">
+                      <span className="text-zinc-400">{d.getDate()}/{d.getMonth()+1}/{d.getFullYear()}</span>
+                      <span className="text-emerald-400 font-bold">{formatCurrency(p.amount)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="animate-fade-in pb-12">
-
       <button 
         onClick={() => setIsAddModalOpen(true)}
         className="flex items-center gap-2 px-6 py-3 mb-8 bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 text-white rounded-xl transition-all shadow-[0_0_15px_rgba(99,102,241,0.3)] font-bold cursor-pointer"
@@ -223,17 +364,13 @@ export default function Cicilan() {
               </div>
 
               {!isCompleted && remaining > 0 && (
-                <div className="mb-4">
-                  <p className="text-[10px] text-zinc-400 mb-2 uppercase tracking-wider font-bold">Estimasi Lunas (Sisa Hari):</p>
-                  <div className="flex flex-col gap-2">
-                    {[20000, 30000, 40000, 50000].map((amt) => (
-                      <div key={amt} className="flex justify-between items-center bg-black/20 rounded-lg p-2 border border-white/5">
-                        <span className="text-xs font-semibold text-zinc-300">{amt/1000}k/hari</span>
-                        <span className="text-xs font-bold text-indigo-400">{Math.ceil(remaining / amt)} hari</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <button
+                  onClick={() => openDetail(cicilan)}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 mb-4 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 hover:border-indigo-500/30 rounded-xl transition-all cursor-pointer"
+                >
+                  <Calculator size={14} className="text-indigo-400" />
+                  <span className="text-xs font-bold text-indigo-400">Lihat Detail</span>
+                </button>
               )}
 
               <button

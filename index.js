@@ -6,7 +6,7 @@ import express from 'express';
 import { handleCommand, handleReportState, reportStates } from './commands.js';
 import { startPresensiMonitoring, getOwnerDb, getV6Db } from './presensi.js';
 import { askGemini } from './ai.js';
-import { getBalance, getSummary, getTransactions, addTransaction, deleteTransaction, getEWallets, addEWallet, deleteEWallet, getCategories, addCategory, deleteCategory, getSixMonthsTrend, getGoals, addGoal, fundGoal, deleteGoal, getExportCSV, getCicilans, addCicilan, setorCicilan, deleteCicilan, getTasks, addTask, updateTask, toggleTask, deleteTask } from './database.js';
+import { getBalance, getSummary, getTransactions, addTransaction, deleteTransaction, getEWallets, addEWallet, deleteEWallet, getCategories, addCategory, deleteCategory, getSixMonthsTrend, getGoals, addGoal, fundGoal, deleteGoal, getExportCSV, getCicilans, addCicilan, setorCicilan, deleteCicilan, getCicilanPayments, getTasks, addTask, updateTask, toggleTask, deleteTask } from './database.js';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
@@ -240,6 +240,15 @@ app.delete("/api/finance/cicilan/:id", (req, res) => {
   }
 });
 
+app.get("/api/finance/cicilan/:id/payments", (req, res) => {
+  const payments = getCicilanPayments(req.params.id);
+  if (payments !== null) {
+    res.json(payments);
+  } else {
+    res.status(404).json({ error: "Cicilan tidak ditemukan" });
+  }
+});
+
 app.get('/api/finance/export', (req, res) => {
   const csv = getExportCSV();
   if (csv) {
@@ -326,7 +335,7 @@ app.post('/webhook/appsheet', async (req, res) => {
     }
     const targetJid = `${cleanNomor}@s.whatsapp.net`;
 
-    const messageText = `UPDATE LAPORAN KERUSAKAN\n\nHalo ${pelapor},\n\nStatus laporan:\n${barang}\n\nTelah diperbarui menjadi:\n✅ ${status}\n\nTanggal:\n${tanggal || '-'}\n\nTerima kasih.`;
+    const messageText = `UPDATE LAPORAN KERUSAKAN\n\nStatus laporan:\n${barang}\n\nTelah diperbarui menjadi:\n✅ ${status}\n\nTanggal:\n${tanggal || '-'}\n\nTerima kasih.`;
 
     if (globalWaSocket) {
       await globalWaSocket.sendMessage(targetJid, { text: messageText });
@@ -430,14 +439,18 @@ async function connectToWhatsApp() {
     for (const msg of m.messages) {
       const senderJid = msg.key.remoteJid;
       
-      // Dapatkan teks pesan
+      // Dapatkan teks pesan (termasuk caption gambar)
       const messageText = (
         msg.message?.conversation || 
         msg.message?.extendedTextMessage?.text || 
+        msg.message?.imageMessage?.caption ||
         ''
       ).trim();
 
-      if (!messageText) {
+      // Deteksi apakah ada gambar
+      const hasImage = !!(msg.message?.imageMessage || msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage);
+
+      if (!messageText && !hasImage) {
         continue;
       }
 
@@ -465,7 +478,7 @@ async function connectToWhatsApp() {
         console.log(`[Proses State Laporan] ${new Date().toLocaleTimeString('id-ID')} | JID: ${senderJid}`);
         try {
           await safeSendPresence('composing', senderJid);
-          const reply = await handleReportState(msg, messageText, senderJid);
+          const reply = await handleReportState(msg, messageText, senderJid, safeSendMessage);
           if (reply && reply.text) {
              await safeSendMessage(senderJid, { text: reply.text }, { quoted: msg });
           }

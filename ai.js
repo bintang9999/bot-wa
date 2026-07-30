@@ -1,11 +1,7 @@
-import { GoogleGenAI } from '@google/genai';
 import { getTransactions, getBalance } from './database.js';
 import { getOwnerDb } from './presensi.js';
 import os from 'os';
 import { execSync } from 'child_process';
-
-// Klien AI tunggal
-let ai = null;
 
 /**
  * Mengambil informasi spesifikasi dan beban server saat ini
@@ -56,23 +52,55 @@ function getServerStatus() {
 }
 
 /**
- * Meminta jawaban dari Gemini AI
+ * Fungsi helper untuk memanggil Custom API (OpenAI Compatible)
+ */
+async function callCustomAI(messages, temperature = 0.7) {
+  const apiKey = process.env.AI_API_KEY;
+  const apiUrl = process.env.AI_API_URL || "http://localhost:20128/v1/chat/completions";
+  const model = process.env.AI_MODEL || "oc/big-pickle";
+
+  if (!apiKey || apiKey.trim() === "") {
+    throw new Error("Kunci API `AI_API_KEY` tidak ditemukan di berkas `.env`.");
+  }
+
+  const response = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: model,
+      messages: messages,
+      temperature: temperature
+    })
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`API Error ${response.status}: ${errText}`);
+  }
+
+  let text = await response.text();
+  
+  // Bersihkan teks dari akhiran stream SSE "data: [DONE]" jika ada
+  text = text.replace(/data:\s*\[DONE\]\s*$/, '').trim();
+
+  const data = JSON.parse(text);
+  if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error("Format respons API tidak sesuai ekspektasi.");
+  }
+  return data.choices[0].message.content;
+}
+
+/**
+ * Meminta jawaban dari AI
  * @param {string} prompt - Pesan pertanyaan dari pengguna
  * @param {boolean} isOwner - Apakah pengirim adalah pemilik bot
  * @param {boolean} isGirlfriend - Apakah pengirim adalah pacar
  * @returns {Promise<string>} Balasan teks dari AI
  */
 export async function askGemini(prompt, isOwner, isGirlfriend) {
-  const apiKey = process.env.GEMINI_API_KEY;
-
-  if (!apiKey || apiKey.trim() === "") {
-    return "⚠️ Fitur AI belum diaktifkan oleh pemilik bot. Kunci API `GEMINI_API_KEY` tidak ditemukan di berkas `.env`.";
-  }
-
-  if (!ai) {
-    ai = new GoogleGenAI({ apiKey });
-  }
-
   try {
     let systemInstruction = "";
     
@@ -86,16 +114,13 @@ Aturan Anda:
 5. Gunakan pemisah baris (line break/enter) yang rapi layaknya gaya chat modern.
 6. Anda TIDAK MEMILIKI AKSES ke data keuangan pemilik bot. Jangan pernah membahas saldo atau transaksi keuangan owner.`;
     } else if (isOwner) {
-      // Ambil data keuangan lengkap sebagai konteks
       const { income, expense, balance } = getBalance();
       const recentTransactions = getTransactions(30);
       
-      // Ambil data presensi owner sebagai konteks tambahan
       const ownerPresensi = getOwnerDb();
       const statusMonitoring = ownerPresensi.is_monitoring ? "Aktif (Sedang memantau portal kuliah)" : "Nonaktif (Berhenti memantau)";
       const totalAbsenSukses = ownerPresensi.sudah_absen ? ownerPresensi.sudah_absen.length : 0;
       
-      // Ambil data server sebagai konteks tambahan
       const server = getServerStatus();
       
       let txListText = "";
@@ -137,7 +162,6 @@ Contoh Balasan AI:
 /keluar 50k makan"
 6. Perintah yang tersedia: /masuk <nominal> <kategori> <keterangan>, /keluar <nominal> <kategori> <keterangan>, /saldo, /rekap, /riwayat, /menu. Sistem akan otomatis mengeksekusi baris yang diawali '/'.`;
     } else {
-      // Pengguna Publik (Umum)
       systemInstruction = `Anda adalah asisten virtual cerdas bernama CampusCare Bot.
 Tugas utama Anda adalah membantu mahasiswa/dosen melaporkan kerusakan fasilitas kampus.
 Aturan Anda:
@@ -151,20 +175,49 @@ Contoh Balasan AI:
 4. Gunakan gaya bahasa yang sopan, komunikatif, dan ramah dalam Bahasa Indonesia.`;
     }
 
-    const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+    const messages = [
+        { role: "system", content: systemInstruction },
+        { role: "user", content: prompt }
+    ];
 
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents: prompt,
-      config: {
-        systemInstruction: systemInstruction,
-        temperature: 0.7,
-      }
-    });
-
-    return response.text;
+    const responseText = await callCustomAI(messages, 0.7);
+    return responseText;
   } catch (error) {
-    console.error("Gagal memanggil API Gemini:", error);
+    console.error("Gagal memanggil API AI:", error);
     return `❌ Maaf, asisten AI sedang mengalami gangguan koneksi: _${error.message}_`;
+  }
+}
+
+/**
+ * Menganalisis laporan kerusakan menggunakan AI
+ */
+export async function analyzeReportPriority(judul, deskripsi) {
+  const prompt = `Analisis laporan kerusakan berikut dan tentukan kategori serta tingkat prioritasnya.
+Judul Laporan: ${judul}
+Deskripsi: ${deskripsi}
+
+Balas HANYA dengan format JSON valid seperti ini tanpa markdown tambahan:
+{"kategori": "Nama Kategori (misal: Listrik, Kebersihan, Bangunan, IT)", "prioritas": "Low/Medium/High/Urgent"}`;
+
+  try {
+    const messages = [{ role: "user", content: prompt }];
+    const responseText = await callCustomAI(messages, 0.1); // temperatur rendah
+
+    let text = responseText.trim();
+    if (text.startsWith('```json')) text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const result = JSON.parse(text);
+    
+    // Validasi enum
+    if (!['Low', 'Medium', 'High', 'Urgent'].includes(result.prioritas)) {
+        result.prioritas = 'Medium';
+    }
+    
+    return {
+       kategori: result.kategori || "Umum",
+       prioritas: result.prioritas || "Medium"
+    };
+  } catch (error) {
+    console.error("Gagal klasifikasi AI:", error);
+    return { kategori: "Umum", prioritas: "Medium" };
   }
 }

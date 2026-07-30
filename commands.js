@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createGuestReport } from './campuscare.js';
+import { analyzeReportPriority } from './ai.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -663,7 +664,7 @@ function handleTugasHapus(args) {
 }
 
 // Main Command Handler
-export async function handleReportState(msg, messageText, senderJid) {
+export async function handleReportState(msg, messageText, senderJid, safeSendMessage) {
   const state = reportStates[senderJid];
   if (!state) return null;
 
@@ -676,41 +677,66 @@ export async function handleReportState(msg, messageText, senderJid) {
     if (!messageText) return { text: "⚠️ Tolong kirimkan lokasi kerusakan dalam bentuk teks." };
     state.lokasi = messageText;
     state.step = 'FOTO';
-    return { text: "📍 Lokasi tersimpan.\n\nSelanjutnya, silakan kirimkan *FOTO* kerusakan dengan *Judul Laporan* di baris pertama dan *Deskripsi* di baris selanjutnya pada *caption* foto.\n\nContoh Caption:\nAC Rusak\nAir AC menetes sangat deras dari pagi.\n\n_(Ketik /batal untuk membatalkan)_" };
+    return { text: "📍 Lokasi tersimpan.\n\n📸 Sekarang, silakan kirimkan *FOTO* dari kerusakan tersebut (boleh dikirim gambarnya saja tanpa teks apapun).\n\n_(Ketik /batal untuk membatalkan)_" };
   }
 
   if (state.step === 'FOTO') {
     const imageMessage = msg.message?.imageMessage || msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage;
     if (!imageMessage) {
-        return { text: "⚠️ Anda harus mengirimkan *FOTO* beserta caption (Judul & Deskripsi)." };
+        return { text: "⚠️ Anda harus mengirimkan *FOTO*. Silakan upload gambar kerusakan." };
     }
     
-    let caption = msg.message?.imageMessage?.caption || messageText;
-    if (!caption || caption.trim() === '') {
-        return { text: "⚠️ Caption (Judul & Deskripsi) tidak boleh kosong." };
-    }
-    
-    const lines = caption.split('\\n').map(l => l.trim()).filter(l => l !== '');
-    const judul = lines[0];
-    const deskripsi = lines.slice(1).join('\\n') || '-';
-
     try {
         const buffer = await downloadMediaMessage(msg, 'buffer', { });
         const filename = 'wa_' + Date.now() + '.jpg';
         const filepath = path.join(uploadDir, filename);
         fs.writeFileSync(filepath, buffer);
         
-        const kontak = senderJid.split('@')[0];
-        const nama = msg.pushName || kontak;
-        
-        const result = createGuestReport(nama, kontak, judul, deskripsi, state.lokasi, filename);
-        delete reportStates[senderJid];
-        
-        return { text: `✅ *Laporan Berhasil Dibuat!*\n\nKode Laporan: *${result.kode_laporan}*\n\nTerima kasih telah melaporkan kerusakan. Admin kami akan segera menindaklanjutinya.` };
+        state.foto = 'uploads/' + filename;
+        state.step = 'JUDUL';
+
+        return { text: "✅ Foto diterima!\n\n📝 Selanjutnya, kirimkan *Judul Laporan* secara singkat.\n(Contoh: AC Rusak / Lampu Mati)" };
     } catch(e) {
         console.error("Gagal mendownload gambar:", e);
         return { text: "❌ Terjadi kesalahan saat memproses gambar laporan. Silakan coba lagi." };
     }
+  }
+
+  if (state.step === 'JUDUL') {
+      if (!messageText) return { text: "⚠️ Tolong kirimkan teks *Judul Laporan*." };
+      state.judul = messageText;
+      state.step = 'DESKRIPSI';
+
+      return { text: "✅ Judul tersimpan.\n\nTerakhir, kirimkan *Deskripsi Lengkap* mengenai kerusakannya.\n(Misalnya: air menetes basah, layar buram tidak jelas, dsb)" };
+  }
+
+  if (state.step === 'DESKRIPSI') {
+      if (!messageText) return { text: "⚠️ Tolong kirimkan teks *Deskripsi* kerusakan." };
+      state.deskripsi = messageText;
+
+      try {
+          const realJid = msg.key.remoteJidAlt || senderJid;
+          const kontak = realJid.split('@')[0];
+          let nama = msg.pushName || kontak;
+          
+          if (/^\d+$/.test(nama)) {
+              // Jika nama hanya berisi angka (LID atau No Telepon), tambahkan awalan
+              nama = '+' + nama;
+          }
+          
+          await safeSendMessage(senderJid, { text: "⏳ *Sedang Menganalisis Laporan...*\nMohon tunggu sebentar." }, { quoted: msg });
+          
+          const aiAnalysis = await analyzeReportPriority(state.judul, state.deskripsi);
+          
+          const result = createGuestReport(nama, kontak, state.judul, state.deskripsi, state.lokasi, state.foto, aiAnalysis.kategori, aiAnalysis.prioritas);
+          delete reportStates[senderJid];
+          
+          return { text: `✅ *Laporan Berhasil Dibuat & Dianalisis !*\n\nKode Laporan: *${result.kode_laporan}*\nKategori: ${aiAnalysis.kategori}\nPrioritas: *${aiAnalysis.prioritas}*\nLokasi: ${state.lokasi}\n\nTerima kasih telah melaporkan kerusakan. Admin kami akan segera menindaklanjutinya.` };
+      } catch(e) {
+          console.error("Gagal save db:", e);
+          delete reportStates[senderJid];
+          return { text: "❌ Maaf, terjadi kesalahan internal saat menyimpan laporan." };
+      }
   }
 
   if (state.step === 'FOTO_AI') {
@@ -725,8 +751,13 @@ export async function handleReportState(msg, messageText, senderJid) {
         const filepath = path.join(uploadDir, filename);
         fs.writeFileSync(filepath, buffer);
         
-        const kontak = senderJid.split('@')[0];
-        const nama = msg.pushName || kontak;
+        const realJid = msg.key.remoteJidAlt || senderJid;
+        const kontak = realJid.split('@')[0];
+        let nama = msg.pushName || kontak;
+        
+        if (/^\d+$/.test(nama)) {
+            nama = '+' + nama;
+        }
         
         const result = createGuestReport(nama, kontak, state.judul, state.deskripsi, state.lokasi, filename);
         delete reportStates[senderJid];
@@ -778,7 +809,7 @@ export async function handleCommand(messageText, senderJid, isOwner) {
     // MENU
     case '/lapor':
       reportStates[senderJid] = { step: 'LOKASI' };
-      return { text: "📢 *Mulai Pelaporan Kerusakan*\n\nSilakan kirimkan *Lokasi Detail* dari kerusakan tersebut.\nContoh: _Gedung A Lantai 2, Ruang Kelas A201_\n\n_(Ketik /batal untuk membatalkan)_" };
+      return { text: "📢 *Mulai Pelaporan Kerusakan*\n\nSilakan kirimkan *Lokasi Detail* dari kerusakan tersebut.\nContoh: Gedung HAR ruang 201, \n\n_(Ketik /batal untuk membatalkan)_" };
 
     case '/lapor_ai':
       const aiData = args.join(' ').split('|').map(s => s.trim());
