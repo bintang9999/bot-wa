@@ -8,8 +8,11 @@ WORKDIR /app
 # Salin berkas package bot
 COPY package*.json ./
 
+# Pasang dependensi build untuk modul native seperti better-sqlite3
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+
 # Pasang dependensi bot
-# Menggunakan node-slim akan mendownload pre-built binary untuk sqlite3 (jauh lebih cepat dari alpine)
+# Menggunakan node-slim masih membutuhkan tools build di arsitektur tertentu (seperti arm64)
 RUN npm install
 
 # Salin semua berkas proyek bot
