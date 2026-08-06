@@ -7,6 +7,12 @@ interface LogEntry {
   message: string;
 }
 
+interface BotStatus {
+  status: 'connected' | 'qr' | 'disconnected';
+  qrCode?: string;
+  qrImage?: string;
+}
+
 const LOG_CONFIG = {
   log: {
     color: 'text-emerald-400',
@@ -39,6 +45,7 @@ export default function Logs() {
   const [loading, setLoading] = useState<boolean>(true);
   const [filter, setFilter] = useState<'all' | 'log' | 'warn' | 'error'>('all');
   const [autoScroll, setAutoScroll] = useState(true);
+  const [botStatus, setBotStatus] = useState<BotStatus>({ status: 'disconnected' });
   const terminalEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -54,9 +61,23 @@ export default function Logs() {
     }
   };
 
+  const fetchBotStatus = async () => {
+    try {
+      const res = await fetch('/api/bot/status');
+      const data = await res.json();
+      setBotStatus(data);
+    } catch (e) {
+      setBotStatus({ status: 'disconnected' });
+    }
+  };
+
   useEffect(() => {
     fetchLogs();
-    const interval = setInterval(fetchLogs, 5000);
+    fetchBotStatus();
+    const interval = setInterval(() => {
+      fetchLogs();
+      fetchBotStatus();
+    }, 4000);
     return () => clearInterval(interval);
   }, []);
 
@@ -99,22 +120,48 @@ export default function Logs() {
             <span className="flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500/30 to-indigo-600/30 border border-indigo-500/30 text-indigo-400">
               <Terminal size={20} />
             </span>
-            System Logs
+            System & Baileys Logs
           </h1>
           <p className="text-sm text-zinc-500 mt-1 ml-[52px]">
-            Realtime log dari bot — auto-refresh setiap 5 detik
+            Realtime logs dari bot WhatsApp (Baileys) — auto-refresh setiap 4 detik
           </p>
         </div>
 
         <button
           id="btn-refresh-logs"
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 text-indigo-300 hover:text-white font-semibold text-sm transition-all active:scale-95 self-start sm:self-auto"
-          onClick={() => { setLoading(true); fetchLogs(); }}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 text-indigo-300 hover:text-white font-semibold text-sm transition-all active:scale-95 self-start sm:self-auto cursor-pointer"
+          onClick={() => { setLoading(true); fetchLogs(); fetchBotStatus(); }}
           disabled={loading}
         >
           <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           Refresh
         </button>
+      </div>
+
+      {/* WhatsApp Status & QR Code Barcode Card */}
+      <div className="glass-premium rounded-2xl p-5 border border-white/10 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className={`w-3 h-3 rounded-full ${botStatus.status === 'connected' ? 'bg-emerald-400 animate-pulse shadow-[0_0_12px_rgba(52,211,153,0.8)]' : botStatus.status === 'qr' ? 'bg-yellow-400 animate-ping' : 'bg-red-500'}`} />
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-white">Status WhatsApp Bot:</span>
+              <span className={`text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${botStatus.status === 'connected' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : botStatus.status === 'qr' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
+                {botStatus.status === 'connected' ? 'Terhubung (Online)' : botStatus.status === 'qr' ? 'Scan Barcode QR' : 'Terputus (Offline)'}
+              </span>
+            </div>
+            <p className="text-xs text-zinc-400 mt-1">
+              {botStatus.status === 'connected' ? 'Bot siap menerima pesan dan perintah.' : botStatus.status === 'qr' ? 'Scan barcode QR di bawah menggunakan WhatsApp di HP Anda (Perangkat Tertaut).' : 'Bot sedang tidak terhubung atau mencoba rekoneksi.'}
+            </p>
+          </div>
+        </div>
+
+        {/* Display QR Barcode Image if available */}
+        {botStatus.status === 'qr' && botStatus.qrImage && (
+          <div className="flex flex-col items-center p-3 bg-white rounded-xl shadow-lg border border-yellow-500/40">
+            <img src={botStatus.qrImage} alt="WhatsApp QR Code" className="w-40 h-40 object-contain" />
+            <span className="text-[10px] font-bold text-black mt-1">Scan QR Code ini</span>
+          </div>
+        )}
       </div>
 
       {/* Stats Bar */}

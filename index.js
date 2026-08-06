@@ -1,6 +1,7 @@
 import makeWASocket, { useMultiFileAuthState, DisconnectReason, areJidsSameUser } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import qrcode from 'qrcode-terminal';
+import QRCode from 'qrcode';
 import dotenv from 'dotenv';
 import express from 'express';
 import { handleCommand, handleReportState, reportStates } from './commands.js';
@@ -18,7 +19,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config();
 
 const botLogs = [];
-const maxLogs = 100;
+const maxLogs = 150;
 const originalLog = console.log;
 const originalError = console.error;
 const originalWarn = console.warn;
@@ -44,8 +45,26 @@ console.warn = function(...args) {
   originalWarn.apply(console, args);
 };
 
+// Baileys pino logger stream -> kirim log asli Baileys ke system logs
+const baileysLogger = pino({ level: 'info' }, {
+  write: (str) => {
+    try {
+      const obj = JSON.parse(str);
+      const msg = obj.msg || JSON.stringify(obj);
+      const levelMap = { 10: 'log', 20: 'log', 30: 'log', 40: 'warn', 50: 'error', 60: 'error' };
+      const logType = levelMap[obj.level] || 'log';
+      addLog(logType, [`[Baileys] ${msg}`]);
+    } catch {
+      addLog('log', [`[Baileys] ${str.trim()}`]);
+    }
+  }
+});
+
 let waConnectionStatus = 'disconnected';
 let waQrData = '';
+let waQrImage = '';
+let isConnecting = false;
+let reconnectTimer = null;
 
 const OWNER_NUMBER = process.env.OWNER_NUMBER;
 
@@ -159,7 +178,7 @@ app.get('/api/logs', (req, res) => {
 });
 
 app.get('/api/bot/status', (req, res) => {
-  res.json({ status: waConnectionStatus, qrCode: waQrData });
+  res.json({ status: waConnectionStatus, qrCode: waQrData, qrImage: waQrImage });
 });
 
 app.post('/api/finance/transaction', (req, res) => {
@@ -426,12 +445,18 @@ app.listen(WEBHOOK_PORT, () => {
 });
 
 async function connectToWhatsApp() {
+  if (isConnecting) {
+    console.log('[Baileys] Proses koneksi sedang berjalan, lewati pemicu ganda.');
+    return;
+  }
+  isConnecting = true;
+
   const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
 
   const sock = makeWASocket({
     auth: state,
-    printQRInTerminal: false, // Kita cetak secara manual di bawah agar lebih rapi
-    logger: pino({ level: 'silent' }) // Kurangi log yang tidak perlu agar terminal bersih
+    printQRInTerminal: false,
+    logger: baileysLogger
   });
 
   const safeSendPresence = async (presence, jid) => {
@@ -452,12 +477,17 @@ async function connectToWhatsApp() {
 
   sock.ev.on('creds.update', saveCreds);
 
-  sock.ev.on('connection.update', (update) => {
+  sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update;
 
     if (qr) {
       waConnectionStatus = 'qr';
       waQrData = qr;
+      try {
+        waQrImage = await QRCode.toDataURL(qr);
+      } catch (err) {
+        waQrImage = '';
+      }
       console.clear();
       console.log('==================================================');
       console.log('SCAN QR CODE BERIKUT UNTUK MENGHUBUNGKAN BOT WA:');
@@ -471,17 +501,29 @@ async function connectToWhatsApp() {
     if (connection === 'close') {
       waConnectionStatus = 'disconnected';
       waQrData = '';
-      const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-      console.log(`Koneksi terputus. Mencoba menghubungkan kembali: ${shouldReconnect}`);
-      if (shouldReconnect) {
-        connectToWhatsApp();
-      } else {
-        console.log('Bot keluar dari sesi WhatsApp. Jalankan kembali untuk menghubungkan ulang.');
-      }
+      waQrImage = '';
       globalWaSocket = null;
+      isConnecting = false;
+
+      const statusCode = lastDisconnect?.error?.output?.statusCode;
+      const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+      
+      console.log(`[Baileys] Koneksi terputus (Status: ${statusCode || 'unknown'}). Reconnect: ${shouldReconnect}`);
+      
+      if (shouldReconnect) {
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(() => {
+          console.log('[Baileys] Mencoba menghubungkan kembali ke WhatsApp...');
+          connectToWhatsApp();
+        }, 5000);
+      } else {
+        console.log('[Baileys] Sesi keluar. Hapus folder auth_info_baileys dan scan QR ulang jika ingin masuk.');
+      }
     } else if (connection === 'open') {
+      isConnecting = false;
       waConnectionStatus = 'connected';
       waQrData = '';
+      waQrImage = '';
       globalWaSocket = sock;
       console.clear();
       console.log('==================================================');
