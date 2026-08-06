@@ -31,7 +31,8 @@ import {
   getTasks,
   addTask,
   toggleTask,
-  deleteTask
+  deleteTask,
+  getWeeklyReport
 } from './database.js';
 
 import { 
@@ -101,6 +102,7 @@ Contoh: \`/out 50k makan\`
 \`/h [n]\` — Riwayat transaksi
 \`/del <id>\` — Hapus transaksi
 \`/ex\` — Export CSV
+\`/lm\` — Laporan mingguan
 
 ──────────────────
 
@@ -575,6 +577,41 @@ function handleCicilanHapus(args) {
   }
 }
 
+// --- LAPORAN MINGGUAN (OWNER ONLY) ---
+function handleLaporanMingguan() {
+  const report = getWeeklyReport();
+  const fromDate = new Date(report.period.from).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+  const toDate = new Date(report.period.to).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  let catText = '';
+  const catEntries = Object.entries(report.categories).sort((a, b) => b[1] - a[1]);
+  if (catEntries.length > 0) {
+    catText = catEntries.slice(0, 5).map(([cat, amt]) => {
+      const name = cat.charAt(0).toUpperCase() + cat.slice(1);
+      return `  • *${name}*: ${formatRupiah(amt)}`;
+    }).join('\n');
+  } else {
+    catText = '  _Tidak ada pengeluaran minggu ini_';
+  }
+
+  const balanceIcon = report.balance >= 0 ? '📈' : '📉';
+
+  return {
+    text: `📊 *LAPORAN MINGGUAN KEUANGAN*\n` +
+          `📅 ${fromDate} — ${toDate}\n` +
+          `━━━━━━━━━━━━━━━━━━━\n\n` +
+          `📥 Pemasukan: *${formatRupiah(report.income)}*\n` +
+          `📤 Pengeluaran: *${formatRupiah(report.expense)}*\n` +
+          `${balanceIcon} Selisih: *${formatRupiah(report.balance)}*\n\n` +
+          `━━━━━━━━━━━━━━━━━━━\n` +
+          `📊 Total Transaksi: *${report.totalTransactions}*\n` +
+          `💰 Rata-rata/hari: *${formatRupiah(report.dailyAverage)}*\n` +
+          `🏆 Top Pengeluaran: *${report.topCategory.name}* (${formatRupiah(report.topCategory.amount)})\n\n` +
+          `*Detail Pengeluaran:*\n${catText}\n\n` +
+          `_Laporan ini dibuat otomatis setiap Minggu malam._`
+  };
+}
+
 // --- TUGAS (OWNER ONLY) ---
 function handleTugasTambah(args) {
   if (args.length === 0) {
@@ -799,6 +836,7 @@ export async function handleCommand(messageText, senderJid, isOwner) {
     '/tugas_list', '/tl',
     '/tugas_done', '/td',
     '/tugas_hapus', '/th',
+    '/laporan_mingguan', '/lm',
   ]);
 
   if (ownerOnlyCommands.has(command) && !isOwner) {
@@ -882,6 +920,10 @@ export async function handleCommand(messageText, senderJid, isOwner) {
       return handleTugasDone(args);
     case '/tugas_hapus': case '/th':
       return handleTugasHapus(args);
+
+    // --- LAPORAN MINGGUAN (OWNER ONLY) ---
+    case '/laporan_mingguan': case '/lm':
+      return handleLaporanMingguan();
 
     default:
       return { text: `❌ Perintah tidak dikenal: *${command}*\nKetik */m* untuk melihat daftar perintah.` };

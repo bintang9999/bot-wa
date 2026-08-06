@@ -16,7 +16,7 @@ import {
   ClipboardList,
 } from 'lucide-react';
 
-const menus = [
+const mainMenus = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/finance', label: 'Finance', icon: Landmark, end: false },
   { to: '/transaksi', label: 'Transaksi', icon: ReceiptText, end: false },
@@ -25,8 +25,13 @@ const menus = [
   { to: '/tujuan', label: 'Tujuan', icon: Target, end: false },
   { to: '/cicilan', label: 'Cicilan', icon: CreditCard, end: false },
   { to: '/tugas', label: 'Tugas', icon: ClipboardList, end: false },
+];
+
+const utilMenus = [
   { to: '/logs', label: 'Logs', icon: Terminal, end: false },
 ];
+
+const menus = [...mainMenus, ...utilMenus];
 
 export default function Sidebar() {
   const [isOled, setIsOled] = useState(false);
@@ -105,9 +110,9 @@ export default function Sidebar() {
               </div>
               <div className="flex-1 min-w-0">
                 <h1 className="text-sm font-extrabold leading-tight text-white tracking-tight truncate">
-                  Keuanganku
+                  NAS Finance
                 </h1>
-                <p className="text-[11px] font-medium text-zinc-500 truncate">Kelola Keuangan</p>
+                <p className="text-[11px] font-medium text-zinc-500 truncate">Dashboard Keuangan</p>
               </div>
             </div>
 
@@ -128,7 +133,51 @@ export default function Sidebar() {
 
             {/* Nav links */}
             <nav className="flex flex-col gap-1 px-2">
-              {menus.map((item) => {
+              {mainMenus.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.end}
+                    id={`nav-${item.label.toLowerCase()}`}
+                    className={({ isActive }) =>
+                      [
+                        'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200',
+                        isActive
+                          ? 'bg-gradient-to-r from-indigo-500/25 to-violet-500/15 text-white shadow-[inset_0_0_0_1px_rgba(99,102,241,0.4)]'
+                          : 'text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200',
+                      ].join(' ')
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <span
+                          className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full transition-all duration-300 ${
+                            isActive ? 'bg-indigo-400 opacity-100' : 'opacity-0'
+                          }`}
+                        />
+                        <Icon
+                          size={18}
+                          className={`shrink-0 transition-all duration-200 ${
+                            isActive ? 'text-indigo-300' : 'group-hover:scale-110 group-hover:text-zinc-200'
+                          }`}
+                        />
+                        <span className="font-medium">{item.label}</span>
+                      </>
+                    )}
+                  </NavLink>
+                );
+              })}
+            </nav>
+
+            {/* Utility Section */}
+            <div className="px-3 mt-4">
+              <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest px-1">Utilitas</span>
+            </div>
+
+            <nav className="flex flex-col gap-1 px-2">
+              {utilMenus.map((item) => {
                 const Icon = item.icon;
                 return (
                   <NavLink
@@ -184,9 +233,16 @@ export default function Sidebar() {
               </span>
             </button>
 
-            <p className="text-center text-[10px] font-medium text-zinc-700">
-              © 2026 Bintang Ramadhani
-            </p>
+            {/* Personal Avatar */}
+            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold shadow-[0_0_12px_rgba(99,102,241,0.3)]">
+                B
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-bold text-zinc-300 truncate">Bintang</p>
+                <p className="text-[10px] font-medium text-zinc-600 truncate">Owner</p>
+              </div>
+            </div>
           </div>
         </div>
 

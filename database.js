@@ -456,6 +456,86 @@ export function deleteCicilan(id) {
 }
 
 // =============================================
+// LAPORAN MINGGUAN (Weekly Report)
+// =============================================
+
+// Mendapatkan rekap keuangan 7 hari terakhir
+export function getWeeklyReport() {
+  const db = readDB();
+  const now = new Date();
+  const weekAgo = new Date(now);
+  weekAgo.setDate(now.getDate() - 7);
+  weekAgo.setHours(0, 0, 0, 0);
+
+  const weeklyTxs = db.transactions.filter(tx => {
+    const txDate = new Date(tx.date);
+    return txDate >= weekAgo && txDate <= now;
+  });
+
+  let income = 0;
+  let expense = 0;
+  const categories = {};
+
+  // Hitung per hari untuk chart (7 hari terakhir)
+  const days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+  const dailyData = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    d.setHours(0, 0, 0, 0);
+    dailyData.push({
+      name: days[d.getDay()],
+      date: d.toISOString().split('T')[0],
+      pemasukan: 0,
+      pengeluaran: 0
+    });
+  }
+
+  weeklyTxs.forEach(tx => {
+    if (tx.type === 'pemasukan') income += tx.amount;
+    if (tx.type === 'pengeluaran') {
+      expense += tx.amount;
+      const cat = tx.category.toLowerCase().trim();
+      categories[cat] = (categories[cat] || 0) + tx.amount;
+    }
+
+    // Masukkan ke data harian
+    const txDateStr = new Date(tx.date).toISOString().split('T')[0];
+    const dayBucket = dailyData.find(d => d.date === txDateStr);
+    if (dayBucket) {
+      if (tx.type === 'pemasukan') dayBucket.pemasukan += tx.amount;
+      if (tx.type === 'pengeluaran') dayBucket.pengeluaran += tx.amount;
+    }
+  });
+
+  // Kategori pengeluaran terbesar
+  let topCategory = { name: '-', amount: 0 };
+  for (const [cat, amt] of Object.entries(categories)) {
+    if (amt > topCategory.amount) {
+      topCategory = { name: cat.charAt(0).toUpperCase() + cat.slice(1), amount: amt };
+    }
+  }
+
+  // Rata-rata pengeluaran harian
+  const dailyAverage = Math.round(expense / 7);
+
+  return {
+    period: {
+      from: weekAgo.toISOString(),
+      to: now.toISOString()
+    },
+    totalTransactions: weeklyTxs.length,
+    income,
+    expense,
+    balance: income - expense,
+    topCategory,
+    dailyAverage,
+    dailyData: dailyData.map(d => ({ name: d.name, pemasukan: d.pemasukan, pengeluaran: d.pengeluaran })),
+    categories
+  };
+}
+
+// =============================================
 // TASK MANAGEMENT (Tugas)
 // =============================================
 

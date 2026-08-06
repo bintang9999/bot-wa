@@ -6,7 +6,7 @@ import express from 'express';
 import { handleCommand, handleReportState, reportStates } from './commands.js';
 import { startPresensiMonitoring, getOwnerDb, getV6Db } from './presensi.js';
 import { askGemini } from './ai.js';
-import { getBalance, getSummary, getTransactions, addTransaction, deleteTransaction, getEWallets, addEWallet, deleteEWallet, getCategories, addCategory, deleteCategory, getSixMonthsTrend, getGoals, addGoal, fundGoal, deleteGoal, getExportCSV, getCicilans, addCicilan, setorCicilan, deleteCicilan, getCicilanPayments, getTasks, addTask, updateTask, toggleTask, deleteTask } from './database.js';
+import { getBalance, getSummary, getTransactions, addTransaction, deleteTransaction, getEWallets, addEWallet, deleteEWallet, getCategories, addCategory, deleteCategory, getSixMonthsTrend, getGoals, addGoal, fundGoal, deleteGoal, getExportCSV, getCicilans, addCicilan, setorCicilan, deleteCicilan, getCicilanPayments, getTasks, addTask, updateTask, toggleTask, deleteTask, getWeeklyReport, formatRupiah } from './database.js';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
@@ -66,6 +66,58 @@ console.log(`Bot dikonfigurasi untuk nomor pemilik: ${cleanOwner} (${ownerJid})`
 
 let isMonitoringStarted = false;
 let globalWaSocket = null;
+let lastWeeklyReportDate = null;
+
+// Scheduler Laporan Mingguan Otomatis (Minggu jam 20:00 WIB)
+function startWeeklyReportScheduler() {
+  setInterval(async () => {
+    try {
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+      
+      // Cek: Hari Minggu (0) jam 20:xx WIB, dan belum kirim hari ini
+      if (now.getDay() === 0 && now.getHours() === 20 && now.getMinutes() < 3 && lastWeeklyReportDate !== todayStr) {
+        if (globalWaSocket) {
+          const report = getWeeklyReport();
+          const fromDate = new Date(report.period.from).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+          const toDate = new Date(report.period.to).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+
+          let catText = '';
+          const catEntries = Object.entries(report.categories).sort((a, b) => b[1] - a[1]);
+          if (catEntries.length > 0) {
+            catText = catEntries.slice(0, 5).map(([cat, amt]) => {
+              const name = cat.charAt(0).toUpperCase() + cat.slice(1);
+              return `  \u2022 *${name}*: ${formatRupiah(amt)}`;
+            }).join('\n');
+          } else {
+            catText = '  _Tidak ada pengeluaran minggu ini_';
+          }
+
+          const balanceIcon = report.balance >= 0 ? '\ud83d\udcc8' : '\ud83d\udcc9';
+
+          const messageText = `\ud83d\udcca *LAPORAN MINGGUAN OTOMATIS*\n` +
+            `\ud83d\udcc5 ${fromDate} \u2014 ${toDate}\n` +
+            `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n` +
+            `\ud83d\udce5 Pemasukan: *${formatRupiah(report.income)}*\n` +
+            `\ud83d\udce4 Pengeluaran: *${formatRupiah(report.expense)}*\n` +
+            `${balanceIcon} Selisih: *${formatRupiah(report.balance)}*\n\n` +
+            `\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n` +
+            `\ud83d\udcca Total Transaksi: *${report.totalTransactions}*\n` +
+            `\ud83d\udcb0 Rata-rata/hari: *${formatRupiah(report.dailyAverage)}*\n` +
+            `\ud83c\udfc6 Top Pengeluaran: *${report.topCategory.name}* (${formatRupiah(report.topCategory.amount)})\n\n` +
+            `*Detail Pengeluaran:*\n${catText}\n\n` +
+            `_Laporan ini dikirim otomatis setiap Minggu malam \ud83c\udf19_`;
+
+          await globalWaSocket.sendMessage(ownerJid, { text: messageText });
+          lastWeeklyReportDate = todayStr;
+          console.log(`[Weekly Report] Laporan mingguan terkirim ke owner.`);
+        }
+      }
+    } catch (err) {
+      console.error('[Weekly Report] Error:', err);
+    }
+  }, 60000); // Cek setiap 60 detik
+}
 
 // Setup Express Webhook Server
 const app = express();
@@ -259,6 +311,10 @@ app.get('/api/finance/export', (req, res) => {
     res.status(400).json({ error: 'Tidak ada transaksi untuk diekspor' });
   }
 });
+
+app.get('/api/finance/weekly-report', (req, res) => {
+  res.json(getWeeklyReport());
+});
 // ==========================================
 // TASK MANAGEMENT API
 // ==========================================
@@ -302,6 +358,20 @@ app.delete('/api/tasks/:id', (req, res) => {
   }
 });
 // ==========================================
+
+// SPA Fallback: serve index.html for all non-API routes
+app.use((req, res, next) => {
+  // Skip API and webhook routes, and non-GET requests
+  if (req.method !== 'GET' || req.path.startsWith('/api') || req.path.startsWith('/webhook')) {
+    return next();
+  }
+  const indexPath = path.join(__dirname, 'web_app', 'dist', 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    next();
+  }
+});
 
 app.post('/webhook/appsheet', async (req, res) => {
   try {
@@ -429,6 +499,10 @@ async function connectToWhatsApp() {
             console.error(`Gagal mengirim notif WA ke ${jid}:`, err);
           }
         });
+        
+        // Jalankan scheduler laporan mingguan
+        startWeeklyReportScheduler();
+        console.log('[Weekly Report] Scheduler laporan mingguan aktif (Minggu 20:00 WIB).');
       }
     }
   });

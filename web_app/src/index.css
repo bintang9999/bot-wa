@@ -501,3 +501,134 @@ tr:hover td {
 @keyframes shimmer {
   100% { transform: translateX(100%); }
 }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+/* Stagger Fade-In for Card Grids */
+.stagger-fade-in > * {
+  opacity: 0;
+  transform: translateY(12px);
+  animation: staggerItem 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.stagger-fade-in > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-fade-in > *:nth-child(2) { animation-delay: 60ms; }
+.stagger-fade-in > *:nth-child(3) { animation-delay: 120ms; }
+.stagger-fade-in > *:nth-child(4) { animation-delay: 180ms; }
+.stagger-fade-in > *:nth-child(5) { animation-delay: 240ms; }
+.stagger-fade-in > *:nth-child(6) { animation-delay: 300ms; }
+
+@keyframes staggerItem {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Card Glow Effect */
+.card-glow {
+  position: relative;
+}
+
+.card-glow::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), transparent 60%, rgba(139, 92, 246, 0.1));
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.card-glow:hover::after {
+  opacity: 1;
+}
+
+/* Gradient Text Utility */
+.gradient-text {
+  background: linear-gradient(135deg, #818cf8, #6366f1, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-emerald {
+  background: linear-gradient(135deg, #34d399, #10b981, #6ee7b7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Page Header */
+.page-greeting {
+  margin-bottom: 2rem;
+}
+
+.page-greeting h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #ffffff;
+  margin-bottom: 0.25rem;
+}
+
+.page-greeting p {
+  font-size: 0.8rem;
+  color: rgba(161, 161, 170, 0.8);
+  font-weight: 500;
+}
+
+@media (min-width: 768px) {
+  .page-greeting h1 {
+    font-size: 1.75rem;
+  }
+}
+
+/* Subtle pulse for live indicators */
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.live-pulse {
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+/* Mini bar chart CSS helpers */
+.mini-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 40px;
+}
+
+.mini-bar-item {
+  flex: 1;
+  border-radius: 3px 3px 0 0;
+  min-height: 3px;
+  transition: height 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
