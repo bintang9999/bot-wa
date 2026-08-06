@@ -18,4 +18,7 @@ RUN npm install
 # Salin semua berkas proyek bot
 COPY . .
 
+# Build frontend web app
+RUN cd web_app && npm install && npm run build
+
 CMD ["node", "index.js"]
