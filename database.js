@@ -409,7 +409,7 @@ export function addCicilan(name, totalAmount, dueDate) {
 }
 
 // Setor Uang ke Cicilan/Hutang
-export function setorCicilan(id, amount) {
+export function setorCicilan(id, amount, date) {
   const db = readDB();
   if (!db.cicilans) return null;
   const idx = db.cicilans.findIndex(c => c.id === id);
@@ -420,17 +420,54 @@ export function setorCicilan(id, amount) {
   
   // Catat riwayat pembayaran
   if (!db.cicilans[idx].payments) db.cicilans[idx].payments = [];
-  db.cicilans[idx].payments.push({
+  const paymentObj = {
+    id: `pay-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     amount: parsedAmount,
-    date: new Date().toISOString()
-  });
+    date: date ? new Date(date).toISOString() : new Date().toISOString()
+  };
+  db.cicilans[idx].payments.push(paymentObj);
   
   if (db.cicilans[idx].collected >= db.cicilans[idx].totalAmount) {
     db.cicilans[idx].status = 'completed';
   }
   
   writeDB(db);
-  return db.cicilans[idx];
+  return { cicilan: db.cicilans[idx], payment: paymentObj };
+}
+
+// Menghapus riwayat pembayaran spesifik dari cicilan
+export function deleteCicilanPayment(cicilanId, paymentId, paymentDate, paymentAmount) {
+  const db = readDB();
+  if (!db.cicilans) return null;
+  const idx = db.cicilans.findIndex(c => c.id === cicilanId);
+  if (idx === -1) return null;
+
+  const cicilan = db.cicilans[idx];
+  if (!cicilan.payments) return null;
+
+  let pIdx = -1;
+  if (paymentId) {
+    pIdx = cicilan.payments.findIndex(p => p.id === paymentId);
+  }
+  if (pIdx === -1 && paymentDate && paymentAmount) {
+    const targetTime = new Date(paymentDate).getTime();
+    pIdx = cicilan.payments.findIndex(p => p.amount === paymentAmount && new Date(p.date).getTime() === targetTime);
+  }
+  if (pIdx === -1 && paymentDate) {
+    const targetDateStr = new Date(paymentDate).toDateString();
+    pIdx = cicilan.payments.findIndex(p => new Date(p.date).toDateString() === targetDateStr);
+  }
+
+  if (pIdx !== -1) {
+    const removed = cicilan.payments.splice(pIdx, 1)[0];
+    cicilan.collected = Math.max(0, cicilan.collected - (removed.amount || 0));
+    if (cicilan.collected < cicilan.totalAmount) {
+      cicilan.status = 'active';
+    }
+    writeDB(db);
+    return cicilan;
+  }
+  return null;
 }
 
 // Mendapatkan riwayat pembayaran cicilan

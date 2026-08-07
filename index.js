@@ -7,7 +7,7 @@ import express from 'express';
 import { handleCommand, handleReportState, reportStates } from './commands.js';
 import { startPresensiMonitoring, getOwnerDb, getV6Db } from './presensi.js';
 import { askGemini } from './ai.js';
-import { getBalance, getSummary, getTransactions, addTransaction, deleteTransaction, getEWallets, addEWallet, deleteEWallet, getCategories, addCategory, deleteCategory, getSixMonthsTrend, getGoals, addGoal, fundGoal, deleteGoal, getExportCSV, getCicilans, addCicilan, setorCicilan, deleteCicilan, getCicilanPayments, getTasks, addTask, updateTask, toggleTask, deleteTask, getWeeklyReport, formatRupiah } from './database.js';
+import { getBalance, getSummary, getTransactions, addTransaction, deleteTransaction, getEWallets, addEWallet, deleteEWallet, getCategories, addCategory, deleteCategory, getSixMonthsTrend, getGoals, addGoal, fundGoal, deleteGoal, getExportCSV, getCicilans, addCicilan, setorCicilan, deleteCicilan, deleteCicilanPayment, getCicilanPayments, getTasks, addTask, updateTask, toggleTask, deleteTask, getWeeklyReport, formatRupiah } from './database.js';
 import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
@@ -293,12 +293,22 @@ app.post("/api/finance/cicilan", (req, res) => {
 });
 
 app.post("/api/finance/cicilan/:id/setor", (req, res) => {
-  const { amount } = req.body;
-  const cicilan = setorCicilan(req.params.id, amount);
+  const { amount, date } = req.body;
+  const result = setorCicilan(req.params.id, amount, date);
+  if (result) {
+    res.json({ success: true, cicilan: result.cicilan || result, payment: result.payment });
+  } else {
+    res.status(404).json({ error: "Cicilan tidak ditemukan" });
+  }
+});
+
+app.delete("/api/finance/cicilan/:id/payment", (req, res) => {
+  const { paymentId, date, amount } = req.body;
+  const cicilan = deleteCicilanPayment(req.params.id, paymentId, date, amount);
   if (cicilan) {
     res.json({ success: true, cicilan });
   } else {
-    res.status(404).json({ error: "Cicilan tidak ditemukan" });
+    res.status(404).json({ error: "Pembayaran tidak ditemukan" });
   }
 });
 
