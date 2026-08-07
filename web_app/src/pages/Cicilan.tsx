@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, CheckCircle2, Plus, Trash2, X, Calculator, ArrowLeft, Check } from 'lucide-react';
+import { CreditCard, CheckCircle2, Plus, Trash2, X, Calculator, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Payment { amount: number; date: string; }
