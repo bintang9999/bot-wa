@@ -1,4 +1,4 @@
-import makeWASocket, { useMultiFileAuthState, DisconnectReason, areJidsSameUser } from '@whiskeysockets/baileys';
+import makeWASocket, { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import qrcode from 'qrcode-terminal';
 import QRCode from 'qrcode';
@@ -462,11 +462,15 @@ async function connectToWhatsApp() {
   isConnecting = true;
 
   const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
+  const { version, isLatest } = await fetchLatestBaileysVersion();
+  console.log(`[Baileys] WA version: v${version.join('.')}, isLatest: ${isLatest}`);
 
   const sock = makeWASocket({
+    version,
     auth: state,
     printQRInTerminal: false,
-    logger: baileysLogger
+    logger: baileysLogger,
+    browser: Browsers.ubuntu('Chrome')
   });
 
   const safeSendPresence = async (presence, jid) => {
@@ -516,7 +520,10 @@ async function connectToWhatsApp() {
       isConnecting = false;
 
       const statusCode = lastDisconnect?.error?.output?.statusCode;
-      const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+      const isSessionInvalid = statusCode === DisconnectReason.loggedOut || 
+                               statusCode === DisconnectReason.connectionReplaced || 
+                               statusCode === DisconnectReason.badSession;
+      const shouldReconnect = !isSessionInvalid;
       
       console.log(`[Baileys] Koneksi terputus (Status: ${statusCode || 'unknown'}). Reconnect: ${shouldReconnect}`);
       
@@ -527,7 +534,8 @@ async function connectToWhatsApp() {
           connectToWhatsApp();
         }, 5000);
       } else {
-        console.log('[Baileys] Sesi keluar. Hapus folder auth_info_baileys dan scan QR ulang jika ingin masuk.');
+        console.warn('[Baileys] Sesi terputus/digantikan (Status: ' + statusCode + '). Auto-reconnect dihentikan untuk mencegah loop.');
+        console.warn('[Baileys] Jika bot dijalankan di dua tempat bersamaan, matikan salah satu. Jika sesi kadaluarsa, hapus folder auth_info_baileys dan restart bot untuk scan QR ulang.');
       }
     } else if (connection === 'open') {
       isConnecting = false;
