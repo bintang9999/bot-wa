@@ -38,14 +38,6 @@ interface WeeklyReport {
   dailyData: { name: string; pemasukan: number; pengeluaran: number }[];
 }
 
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 5) return 'Selamat Malam';
-  if (hour < 11) return 'Selamat Pagi';
-  if (hour < 15) return 'Selamat Siang';
-  if (hour < 18) return 'Selamat Sore';
-  return 'Selamat Malam';
-}
 
 export default function Dashboard() {
   const [financeSummary, setFinanceSummary] = useState<FinanceSummary | null>(null);
@@ -90,7 +82,6 @@ export default function Dashboard() {
     return `Rp${val}`;
   };
 
-  const todayStr = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
     <div className="animate-fade-in dashboard-full-height">
