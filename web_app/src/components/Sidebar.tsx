@@ -245,7 +245,7 @@ export default function Sidebar() {
       {showMobileSettings && (
         <div className="md:hidden fixed inset-0 z-[100] flex flex-col justify-end">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowMobileSettings(false)} />
-      <div className="mobile-settings-sheet rounded-t-3xl max-h-[85vh] flex flex-col">
+      <div className="mobile-settings-sheet rounded-t-3xl max-h-[85vh] flex flex-col relative isolate">
             {/* Handle */}
             <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
               <div className="mobile-settings-handle w-10 h-1 rounded-full" />
