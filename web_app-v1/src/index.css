@@ -41,17 +41,6 @@
   --card-hover: #050505;
 }
 
-:root[data-theme="light"] {
-  --bg-dark: #f1f5f9;
-  --bg-gradient-1: #f1f5f9;
-  --bg-gradient-2: #e2e8f0;
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --card-bg: #ffffff;
-  --card-border: rgba(0, 0, 0, 0.07);
-  --card-hover: #f8fafc;
-}
-
 * {
   margin: 0;
   padding: 0;
@@ -99,16 +88,10 @@ body {
     padding: 1rem 0.75rem;
   }
 
-  [data-theme="light"] aside.app-sidebar {
-    border-right: 1px solid rgba(0, 0, 0, 0.08);
-    background: rgba(255, 255, 255, 0.85);
-  }
-
   main.app-main {
     flex: 1;
     min-width: 0;
-    padding: 1.25rem 2rem;
-    height: 100vh;
+    padding: 2rem 2.5rem;
     overflow-y: auto;
     display: flex;
     justify-content: center;
@@ -118,41 +101,6 @@ body {
   main.app-main > * {
     width: 100%;
     max-width: 1200px;
-  }
-}
-
-/* Full-height page layouts */
-.dashboard-full-height {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding-bottom: 1rem;
-}
-
-.finance-full-height {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding-bottom: 1rem;
-}
-
-@media (min-width: 768px) {
-  .dashboard-full-height {
-    display: grid !important;
-    grid-template-rows: auto 1.2fr 1.5fr 2.5fr;
-    height: calc(100vh - 2.5rem);
-    overflow: hidden;
-    gap: 0.5rem;
-    padding-bottom: 0;
-  }
-  
-  .finance-full-height {
-    display: flex !important;
-    flex-direction: column;
-    height: calc(100vh - 2.5rem);
-    overflow: hidden;
-    gap: 0.5rem;
-    padding-bottom: 0;
   }
 }
 
@@ -175,11 +123,6 @@ body {
     -webkit-backdrop-filter: blur(20px);
     /* iOS safe area */
     padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
-  [data-theme="light"] aside.app-sidebar {
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
-    background: rgba(255, 255, 255, 0.95);
   }
 
   main.app-main {
@@ -254,167 +197,6 @@ body {
 [data-theme="oled"] .bg-\[\#141A28\]\/80 {
   background-color: rgba(0, 0, 0, 0.8) !important;
 }
-
-/* Light Mode Overrides */
-[data-theme="light"] body,
-[data-theme="light"] #root {
-  background-color: #f1f5f9 !important;
-  color: #0f172a !important;
-}
-
-[data-theme="light"] .glass {
-  background: rgba(255, 255, 255, 0.8);
-  border-color: rgba(0, 0, 0, 0.07);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-}
-
-[data-theme="light"] .glass:hover {
-  border-color: rgba(0, 0, 0, 0.12);
-}
-
-[data-theme="light"] .glass-premium {
-  background: linear-gradient(145deg, rgba(255,255,255,0.95), rgba(248,250,252,0.9));
-  border: 1px solid rgba(0, 0, 0, 0.07);
-  border-top: 1px solid rgba(255, 255, 255, 1);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
-}
-
-[data-theme="light"] .glass-premium:hover {
-  border-color: rgba(0, 0, 0, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
-
-/* Light: scrollbar */
-[data-theme="light"] ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.12);
-}
-[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.2);
-}
-
-/* Light: Tailwind dark text overrides (most common zinc/slate classes) */
-[data-theme="light"] .text-white { color: #0f172a !important; }
-[data-theme="light"] .text-zinc-100 { color: #1e293b !important; }
-[data-theme="light"] .text-zinc-200 { color: #334155 !important; }
-[data-theme="light"] .text-zinc-300 { color: #475569 !important; }
-[data-theme="light"] .text-zinc-400 { color: #64748b !important; }
-[data-theme="light"] .text-zinc-500 { color: #94a3b8 !important; }
-[data-theme="light"] .text-zinc-600 { color: #cbd5e1 !important; }
-
-/* Light: card/panel backgrounds */
-[data-theme="light"] .bg-zinc-900 { background-color: #ffffff !important; }
-[data-theme="light"] .bg-zinc-950 { background-color: #f8fafc !important; }
-[data-theme="light"] .bg-zinc-800 { background-color: #f1f5f9 !important; }
-[data-theme="light"] .bg-\[\#141A28\] { background-color: #ffffff !important; }
-[data-theme="light"] .bg-\[\#141A28\]\/80 { background-color: rgba(255,255,255,0.8) !important; }
-[data-theme="light"] .bg-black\/40 { background-color: rgba(0,0,0,0.04) !important; }
-[data-theme="light"] .bg-black\/60 { background-color: rgba(0,0,0,0.06) !important; }
-[data-theme="light"] .bg-white\/\[0\.02\] { background-color: rgba(0,0,0,0.02) !important; }
-[data-theme="light"] .bg-white\/\[0\.03\] { background-color: rgba(0,0,0,0.03) !important; }
-[data-theme="light"] .bg-white\/\[0\.04\] { background-color: rgba(0,0,0,0.04) !important; }
-[data-theme="light"] .bg-white\/\[0\.05\] { background-color: rgba(0,0,0,0.05) !important; }
-
-/* Light: borders */
-[data-theme="light"] .border-white\/\[0\.04\] { border-color: rgba(0,0,0,0.06) !important; }
-[data-theme="light"] .border-white\/\[0\.06\] { border-color: rgba(0,0,0,0.08) !important; }
-[data-theme="light"] .border-white\/\[0\.08\] { border-color: rgba(0,0,0,0.10) !important; }
-[data-theme="light"] .border-white\/10 { border-color: rgba(0,0,0,0.10) !important; }
-
-/* ── Settings panel (desktop popup & mobile sheet) ── */
-.settings-panel {
-  background: rgba(22, 22, 26, 0.97);
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 -16px 48px rgba(0,0,0,0.7);
-  color: #e4e4e7;
-}
-.settings-panel-divider {
-  border-color: rgba(255,255,255,0.05);
-}
-.settings-panel-label {
-  color: rgba(113,113,122,0.7);
-}
-.settings-panel-close {
-  background: rgba(255,255,255,0.06);
-  color: #71717a;
-}
-.settings-panel-close:hover {
-  background: rgba(255,255,255,0.10);
-  color: #e4e4e7;
-}
-
-.mobile-settings-sheet {
-  background: #09090b;
-  border-top: 1px solid rgba(255,255,255,0.10);
-  box-shadow: 0 -16px 60px rgba(0,0,0,0.8);
-  color: #e4e4e7;
-}
-.mobile-settings-handle {
-  background: rgba(255,255,255,0.20);
-}
-.mobile-settings-header {
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-}
-
-/* Light overrides for settings panel */
-[data-theme="light"] .settings-panel {
-  background: rgba(255,255,255,0.98) !important;
-  border: 1px solid rgba(0,0,0,0.09) !important;
-  box-shadow: 0 -8px 40px rgba(0,0,0,0.10) !important;
-  color: #0f172a !important;
-}
-[data-theme="light"] .settings-panel-divider {
-  border-color: rgba(0,0,0,0.07) !important;
-}
-[data-theme="light"] .settings-panel-label {
-  color: #94a3b8 !important;
-}
-[data-theme="light"] .settings-panel-close {
-  background: rgba(0,0,0,0.05) !important;
-  color: #94a3b8 !important;
-}
-[data-theme="light"] .settings-panel-close:hover {
-  background: rgba(0,0,0,0.09) !important;
-  color: #334155 !important;
-}
-[data-theme="light"] .settings-panel .text-white { color: #0f172a !important; }
-[data-theme="light"] .settings-panel .text-zinc-200 { color: #334155 !important; }
-[data-theme="light"] .settings-panel .text-zinc-400 { color: #64748b !important; }
-[data-theme="light"] .settings-panel .text-zinc-500 { color: #94a3b8 !important; }
-[data-theme="light"] .settings-panel .text-zinc-600 { color: #94a3b8 !important; }
-[data-theme="light"] .settings-panel .bg-white\/\[0\.02\] { background-color: rgba(0,0,0,0.02) !important; }
-[data-theme="light"] .settings-panel .bg-white\/\[0\.03\] { background-color: rgba(0,0,0,0.03) !important; }
-[data-theme="light"] .settings-panel .bg-white\/\[0\.04\] { background-color: rgba(0,0,0,0.04) !important; }
-[data-theme="light"] .settings-panel .bg-white\/\[0\.05\] { background-color: rgba(0,0,0,0.05) !important; }
-[data-theme="light"] .settings-panel .bg-white\/5 { background-color: rgba(0,0,0,0.04) !important; }
-[data-theme="light"] .settings-panel .border-white\/\[0\.05\] { border-color: rgba(0,0,0,0.07) !important; }
-[data-theme="light"] .settings-panel .border-white\/\[0\.06\] { border-color: rgba(0,0,0,0.08) !important; }
-[data-theme="light"] .settings-panel .hover\:bg-white\/\[0\.03\]:hover { background-color: rgba(0,0,0,0.03) !important; }
-[data-theme="light"] .settings-panel .hover\:bg-indigo-500\/15:hover { background-color: rgba(99,102,241,0.12) !important; }
-
-/* Light overrides for mobile sheet */
-[data-theme="light"] .mobile-settings-sheet {
-  background: #f8fafc !important;
-  border-top: 1px solid rgba(0,0,0,0.08) !important;
-  box-shadow: 0 -8px 40px rgba(0,0,0,0.08) !important;
-  color: #0f172a !important;
-}
-[data-theme="light"] .mobile-settings-handle {
-  background: rgba(0,0,0,0.15) !important;
-}
-[data-theme="light"] .mobile-settings-header {
-  border-bottom: 1px solid rgba(0,0,0,0.07) !important;
-}
-[data-theme="light"] .mobile-settings-sheet .text-white { color: #0f172a !important; }
-[data-theme="light"] .mobile-settings-sheet .text-zinc-200 { color: #334155 !important; }
-[data-theme="light"] .mobile-settings-sheet .text-zinc-500 { color: #94a3b8 !important; }
-[data-theme="light"] .mobile-settings-sheet .text-zinc-600 { color: #94a3b8 !important; }
-[data-theme="light"] .mobile-settings-sheet .bg-white\/5 { background-color: rgba(0,0,0,0.04) !important; }
-[data-theme="light"] .mobile-settings-sheet .bg-white\/\[0\.03\] { background-color: rgba(0,0,0,0.03) !important; }
-[data-theme="light"] .mobile-settings-sheet .border-white\/\[0\.06\] { border-color: rgba(0,0,0,0.08) !important; }
-[data-theme="light"] .mobile-settings-sheet .hover\:bg-white\/10:hover { background-color: rgba(0,0,0,0.07) !important; }
-[data-theme="light"] .mobile-settings-sheet .hover\:bg-indigo-500\/15:hover { background-color: rgba(99,102,241,0.10) !important; }
-[data-theme="light"] .mobile-settings-sheet .hover\:bg-white\/\[0\.03\]:hover { background-color: rgba(0,0,0,0.03) !important; }
-
 
 /* Layout */
 .app-container {

@@ -6,6 +6,7 @@ import type { EWallet } from '../components/Finance/SummaryCards';
 import FinancialSummary from '../components/Finance/FinancialSummary';
 import CategoryExpenses from '../components/Finance/CategoryExpenses';
 import RecentTransactions from '../components/Finance/RecentTransactions';
+import MotivationBanner from '../components/Finance/MotivationBanner';
 import TransactionModal from '../components/Finance/TransactionModal';
 
 interface FinanceSummary {
@@ -44,7 +45,7 @@ export default function Finance() {
     try {
       const [sumRes, txRes, ewRes, trendRes] = await Promise.all([
         fetch(`/api/finance/summary?period=${p}`).then(res => res.json()),
-        fetch('/api/finance/transactions?limit=30').then(res => res.json()),
+        fetch('/api/finance/transactions?limit=5').then(res => res.json()),
         fetch('/api/finance/ewallets').then(res => res.json()),
         fetch('/api/finance/trend').then(res => res.json())
       ]);
@@ -148,7 +149,7 @@ export default function Finance() {
   const balance = cashBalance + eWalletTotal;
 
   return (
-    <div className="finance animate-fade-in finance-full-height flex flex-col">
+    <div className="finance animate-fade-in pb-12">
       <FinanceHeader 
         period={period} 
         setPeriod={setPeriod} 
@@ -169,9 +170,9 @@ export default function Finance() {
             onDeleteEWallet={handleDeleteEWallet}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             {/* Left Column: Charts */}
-            <div className="lg:col-span-2 flex flex-col gap-6 min-h-0 overflow-y-auto pr-1 custom-scrollbar">
+            <div className="lg:col-span-2 flex flex-col gap-6">
               <FinancialSummary 
                 income={income} 
                 expense={expense} 
@@ -186,10 +187,12 @@ export default function Finance() {
             </div>
 
             {/* Right Column: Recent Transactions */}
-            <div className="lg:col-span-1 flex flex-col min-h-0 overflow-hidden h-full flex-1">
+            <div className="lg:col-span-1">
               <RecentTransactions transactions={recentTransactions} onRefresh={() => fetchData(period)} />
             </div>
           </div>
+
+          <MotivationBanner />
         </>
       )}
 

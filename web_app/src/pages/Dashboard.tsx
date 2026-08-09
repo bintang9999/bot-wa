@@ -58,7 +58,7 @@ export default function Dashboard() {
     try {
       const [financeRes, txRes, presensiRes, weeklyRes] = await Promise.all([
         fetch('/api/finance/summary?period=bulan').then(res => res.json()).catch(() => null),
-        fetch('/api/finance/transactions?limit=5').then(res => res.json()).catch(() => []),
+        fetch('/api/finance/transactions?limit=10').then(res => res.json()).catch(() => []),
         fetch('/api/presensi/status').then(res => res.json()).catch(() => null),
         fetch('/api/finance/weekly-report').then(res => res.json()).catch(() => null)
       ]);
@@ -92,31 +92,22 @@ export default function Dashboard() {
 
   const todayStr = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-  // Mini bar chart: get max value for scaling
-  const dailyData = weeklyReport?.dailyData || [];
-  const maxDailyVal = Math.max(...dailyData.map(d => Math.max(d.pemasukan, d.pengeluaran)), 1);
-
   return (
-    <div className="animate-fade-in pb-12">
-      
-      {/* Greeting Header */}
-      <div className="page-greeting">
-        <h1>{getGreeting()}, Bintang 👋</h1>
-        <p>{todayStr}</p>
-      </div>
+    <div className="animate-fade-in dashboard-full-height">
 
-      {/* Finance Overview Cards */}
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider">Keuangan Bulan Ini</h2>
+      {/* Row 1: Section Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Keuangan Bulan Ini</h2>
         <Link to="/finance" className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1">
           Detail <ArrowUpRight size={12} />
         </Link>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-8 stagger-fade-in">
+      {/* Row 2: Finance Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 stagger-fade-in">
         {/* Pemasukan */}
-        <div className="glass-premium card-glow rounded-2xl md:rounded-3xl p-5 md:p-7 relative overflow-hidden group">
-          <div className="flex items-center justify-between mb-3">
+        <div className="glass-premium card-glow rounded-2xl p-4 md:p-5 relative overflow-hidden group flex flex-col justify-center">
+          <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] md:text-xs font-bold text-zinc-500 uppercase tracking-wider">Pemasukan</span>
             <div className="p-1.5 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
               <TrendingUp size={14} className="text-emerald-500" />
@@ -124,7 +115,7 @@ export default function Dashboard() {
           </div>
           <span className="text-xl md:text-2xl font-extrabold gradient-text-emerald">{formatCurrency(financeSummary?.income || 0)}</span>
           {/* Sparkline */}
-          <div className="absolute bottom-0 left-0 w-full h-10 opacity-60 pointer-events-none">
+          <div className="absolute bottom-0 left-0 w-full h-8 opacity-60 pointer-events-none">
             <svg viewBox="0 0 100 25" preserveAspectRatio="none" className="w-full h-full">
               <path d="M0,18 C15,22 25,5 45,12 C65,19 80,8 100,10 L100,25 L0,25 Z" fill="url(#gradGreenDash)" opacity="0.2"/>
               <path d="M0,18 C15,22 25,5 45,12 C65,19 80,8 100,10" fill="none" stroke="#10b981" strokeWidth="1.5" opacity="0.6"/>
@@ -139,15 +130,15 @@ export default function Dashboard() {
         </div>
 
         {/* Pengeluaran */}
-        <div className="glass-premium card-glow rounded-2xl md:rounded-3xl p-5 md:p-7 relative overflow-hidden group">
-          <div className="flex items-center justify-between mb-3">
+        <div className="glass-premium card-glow rounded-2xl p-4 md:p-5 relative overflow-hidden group flex flex-col justify-center">
+          <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] md:text-xs font-bold text-zinc-500 uppercase tracking-wider">Pengeluaran</span>
             <div className="p-1.5 bg-red-500/10 rounded-lg border border-red-500/20">
               <TrendingDown size={14} className="text-red-500" />
             </div>
           </div>
           <span className="text-xl md:text-2xl font-extrabold text-red-500">{formatCurrency(financeSummary?.expense || 0)}</span>
-          <div className="absolute bottom-0 left-0 w-full h-10 opacity-60 pointer-events-none">
+          <div className="absolute bottom-0 left-0 w-full h-8 opacity-60 pointer-events-none">
             <svg viewBox="0 0 100 25" preserveAspectRatio="none" className="w-full h-full">
               <path d="M0,12 C20,8 30,20 50,16 C70,12 85,20 100,18 L100,25 L0,25 Z" fill="url(#gradRedDash)" opacity="0.2"/>
               <path d="M0,12 C20,8 30,20 50,16 C70,12 85,20 100,18" fill="none" stroke="#ef4444" strokeWidth="1.5" opacity="0.6"/>
@@ -162,15 +153,15 @@ export default function Dashboard() {
         </div>
 
         {/* Sisa Saldo */}
-        <div className="glass-premium card-glow rounded-2xl md:rounded-3xl p-5 md:p-7 relative overflow-hidden group">
-          <div className="flex items-center justify-between mb-3">
+        <div className="glass-premium card-glow rounded-2xl p-4 md:p-5 relative overflow-hidden group flex flex-col justify-center">
+          <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] md:text-xs font-bold text-zinc-500 uppercase tracking-wider">Sisa Saldo</span>
             <div className="p-1.5 bg-indigo-500/10 rounded-lg border border-indigo-500/20">
               <Wallet size={14} className="text-indigo-400" />
             </div>
           </div>
           <span className="text-xl md:text-2xl font-extrabold gradient-text">{formatCurrency(financeSummary?.balance || 0)}</span>
-          <div className="absolute bottom-0 left-0 w-full h-10 opacity-60 pointer-events-none">
+          <div className="absolute bottom-0 left-0 w-full h-8 opacity-60 pointer-events-none">
             <svg viewBox="0 0 100 25" preserveAspectRatio="none" className="w-full h-full">
               <path d="M0,20 C10,8 20,12 35,16 C55,20 70,6 100,12 L100,25 L0,25 Z" fill="url(#gradBlueDash)" opacity="0.2"/>
               <path d="M0,20 C10,8 20,12 35,16 C55,20 70,6 100,12" fill="none" stroke="#6366f1" strokeWidth="1.5" opacity="0.6"/>
@@ -186,118 +177,139 @@ export default function Dashboard() {
       </div>
 
       {/* Weekly Report + Mini Chart */}
-      {weeklyReport && (
-        <div className="mb-8">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
-              <BarChart3 size={16} className="text-indigo-400" />
-              Ringkasan Minggu Ini
-            </h2>
-          </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 stagger-fade-in">
-            {/* Quick Stats Row */}
-            <div className="lg:col-span-2 grid grid-cols-2 gap-3">
-              <div className="glass-premium rounded-2xl p-4 flex flex-col justify-between">
-                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2">Transaksi</span>
-                <span className="text-2xl font-extrabold text-white">{weeklyReport.totalTransactions}</span>
-                <span className="text-[10px] font-medium text-zinc-500 mt-1">7 hari terakhir</span>
-              </div>
+      {(() => {
+        const report = weeklyReport || {
+          totalTransactions: 0,
+          dailyAverage: 0,
+          topCategory: { name: '-', amount: 0 },
+          balance: 0,
+          dailyData: [
+            { name: 'Min', pemasukan: 0, pengeluaran: 0 },
+            { name: 'Sen', pemasukan: 0, pengeluaran: 0 },
+            { name: 'Sel', pemasukan: 0, pengeluaran: 0 },
+            { name: 'Rab', pemasukan: 0, pengeluaran: 0 },
+            { name: 'Kam', pemasukan: 0, pengeluaran: 0 },
+            { name: 'Jum', pemasukan: 0, pengeluaran: 0 },
+            { name: 'Sab', pemasukan: 0, pengeluaran: 0 }
+          ]
+        };
+        const chartDailyData = report.dailyData || [];
+        const chartMaxVal = Math.max(...chartDailyData.map(d => Math.max(d.pemasukan, d.pengeluaran)), 1);
 
-              <div className="glass-premium rounded-2xl p-4 flex flex-col justify-between">
-                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2">Rata²/Hari</span>
-                <span className="text-2xl font-extrabold text-amber-400">{formatCompact(weeklyReport.dailyAverage)}</span>
-                <span className="text-[10px] font-medium text-zinc-500 mt-1">pengeluaran</span>
-              </div>
-
-              <div className="glass-premium rounded-2xl p-4 flex flex-col justify-between">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Flame size={12} className="text-orange-400" />
-                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Top Kategori</span>
-                </div>
-                <span className="text-sm font-bold text-white truncate">{weeklyReport.topCategory.name}</span>
-                <span className="text-[10px] font-medium text-zinc-500 mt-1">{formatCompact(weeklyReport.topCategory.amount)}</span>
-              </div>
-
-              <div className="glass-premium rounded-2xl p-4 flex flex-col justify-between">
-                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2">Selisih</span>
-                <span className={`text-2xl font-extrabold ${weeklyReport.balance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {weeklyReport.balance >= 0 ? '+' : ''}{formatCompact(weeklyReport.balance)}
-                </span>
-                <span className="text-[10px] font-medium text-zinc-500 mt-1">minggu ini</span>
-              </div>
+        return (
+          <div className="flex flex-col min-h-0 h-full">
+            <div className="mb-2 flex items-center justify-between flex-shrink-0">
+              <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+                <BarChart3 size={14} className="text-indigo-400" />
+                Ringkasan Minggu Ini
+              </h2>
             </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-2.5 md:gap-3 stagger-fade-in flex-1 min-h-0">
+              {/* Quick Stats Row */}
+              <div className="md:col-span-2 grid grid-cols-2 gap-2.5">
+                <div className="glass-premium rounded-xl p-3 flex flex-col justify-center">
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">Transaksi</span>
+                  <span className="text-xl font-extrabold text-white">{report.totalTransactions}</span>
+                  <span className="text-[9px] font-medium text-zinc-500 mt-0.5">7 hari terakhir</span>
+                </div>
 
-            {/* Mini Daily Chart */}
-            <div className="lg:col-span-3 glass-premium rounded-2xl p-5">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-bold text-zinc-400">Aktivitas Harian</span>
-                <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Masuk
+                <div className="glass-premium rounded-xl p-3 flex flex-col justify-center">
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">Rata²/Hari</span>
+                  <span className="text-xl font-extrabold text-amber-400">{formatCompact(report.dailyAverage)}</span>
+                  <span className="text-[9px] font-medium text-zinc-500 mt-0.5">pengeluaran</span>
+                </div>
+
+                <div className="glass-premium rounded-xl p-3 flex flex-col justify-center">
+                  <div className="flex items-center gap-1 mb-1">
+                    <Flame size={12} className="text-orange-400" />
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Top Kategori</span>
+                  </div>
+                  <span className="text-xs font-bold text-white truncate">{report.topCategory.name}</span>
+                  <span className="text-[9px] font-medium text-zinc-500 mt-0.5">{formatCompact(report.topCategory.amount)}</span>
+                </div>
+
+                <div className="glass-premium rounded-xl p-3 flex flex-col justify-center">
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">Selisih</span>
+                  <span className={`text-xl font-extrabold ${report.balance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {report.balance >= 0 ? '+' : ''}{formatCompact(report.balance)}
                   </span>
-                  <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-400">
-                    <span className="w-2 h-2 rounded-full bg-red-500"></span> Keluar
-                  </span>
+                  <span className="text-[9px] font-medium text-zinc-500 mt-0.5">minggu ini</span>
                 </div>
               </div>
 
-              <div className="flex items-end gap-1.5" style={{ height: '100px' }}>
-                {dailyData.map((day, i) => {
-                  const inHeight = Math.max((day.pemasukan / maxDailyVal) * 100, 3);
-                  const outHeight = Math.max((day.pengeluaran / maxDailyVal) * 100, 3);
-                  return (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                      <div className="w-full flex gap-0.5 items-end" style={{ height: '80px' }}>
-                        <div
-                          className="flex-1 rounded-t-sm bg-emerald-500/70 transition-all duration-700"
-                          style={{ height: `${inHeight}%`, animationDelay: `${i * 80}ms` }}
-                          title={`Masuk: ${formatCompact(day.pemasukan)}`}
-                        />
-                        <div
-                          className="flex-1 rounded-t-sm bg-red-500/70 transition-all duration-700"
-                          style={{ height: `${outHeight}%`, animationDelay: `${i * 80}ms` }}
-                          title={`Keluar: ${formatCompact(day.pengeluaran)}`}
-                        />
+              {/* Mini Daily Chart */}
+              <div className="md:col-span-3 glass-premium rounded-xl p-4 flex flex-col">
+                <div className="flex items-center justify-between mb-2 flex-shrink-0">
+                  <span className="text-xs font-bold text-zinc-400">Aktivitas Harian</span>
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Masuk
+                    </span>
+                    <span className="flex items-center gap-1.5 text-[10px] font-bold text-red-400">
+                      <span className="w-2 h-2 rounded-full bg-red-500"></span> Keluar
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-end gap-1.5 flex-1">
+                  {chartDailyData.map((day, i) => {
+                    const inHeight = Math.max((day.pemasukan / chartMaxVal) * 100, 3);
+                    const outHeight = Math.max((day.pengeluaran / chartMaxVal) * 100, 3);
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                        <div className="w-full flex gap-0.5 items-end flex-1">
+                          <div
+                            className="flex-1 rounded-t-sm bg-emerald-500/70 transition-all duration-700"
+                            style={{ height: `${inHeight}%`, animationDelay: `${i * 80}ms` }}
+                            title={`Masuk: ${formatCompact(day.pemasukan)}`}
+                          />
+                          <div
+                            className="flex-1 rounded-t-sm bg-red-500/70 transition-all duration-700"
+                            style={{ height: `${outHeight}%`, animationDelay: `${i * 80}ms` }}
+                            title={`Keluar: ${formatCompact(day.pengeluaran)}`}
+                          />
+                        </div>
+                        <span className="text-[9px] font-bold text-zinc-600">{day.name}</span>
                       </div>
-                      <span className="text-[9px] font-bold text-zinc-600">{day.name}</span>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Row 4: Transaksi Terakhir & Status Presensi */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 min-h-0 overflow-hidden">
         {/* Recent Transactions Widget */}
-        <div className="flex flex-col gap-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
-              <Calendar size={16} className="text-indigo-400" />
+        <div className="flex flex-col gap-2 min-h-0 overflow-hidden">
+          <div className="flex justify-between items-center flex-shrink-0">
+            <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+              <Calendar size={14} className="text-indigo-400" />
               Transaksi Terakhir
             </h2>
           </div>
-          <div className="glass-premium rounded-2xl md:rounded-3xl p-5 md:p-7 flex-1">
+          <div className="glass-premium rounded-2xl p-4 flex flex-col flex-1 min-h-0 overflow-hidden">
             {recentTransactions.length === 0 ? (
-              <div className="text-center py-12">
+              <div className="text-center py-8 my-auto">
                 <p className="text-zinc-500 text-sm">Belum ada transaksi</p>
               </div>
             ) : (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-1 overflow-y-auto flex-1 min-h-0 pr-1">
                 {recentTransactions.map(tx => (
-                  <div key={tx.id} className="flex justify-between items-center p-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/5 group">
+                  <div key={tx.id} className="flex justify-between items-center p-2.5 rounded-xl hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-white/5 group">
                     <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${tx.type === 'pemasukan' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
-                        {tx.type === 'pemasukan' ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center border ${tx.type === 'pemasukan' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
+                        {tx.type === 'pemasukan' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
                       </div>
                       <div>
-                        <div className="text-sm font-bold text-white mb-0.5 capitalize group-hover:text-indigo-200 transition-colors">{tx.category}</div>
+                        <div className="text-xs font-bold text-white mb-0.5 capitalize group-hover:text-indigo-200 transition-colors">{tx.category}</div>
                         <div className="text-[10px] font-medium text-zinc-600">{new Date(tx.date).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'})}</div>
                       </div>
                     </div>
-                    <div className={`text-sm font-bold ${tx.type === 'pemasukan' ? 'text-emerald-500' : 'text-red-500'}`}>
+                    <div className={`text-xs font-bold ${tx.type === 'pemasukan' ? 'text-emerald-500' : 'text-red-500'}`}>
                       {tx.type === 'pemasukan' ? '+' : '-'}{formatCurrency(tx.amount)}
                     </div>
                   </div>
@@ -305,47 +317,47 @@ export default function Dashboard() {
               </div>
             )}
             
-            <Link to="/riwayat" className="mt-4 flex justify-center w-full py-3 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 hover:from-indigo-500/20 hover:to-purple-500/20 text-indigo-400 hover:text-indigo-300 border border-indigo-500/20 text-xs font-bold rounded-xl transition-all">
+            <Link to="/riwayat" className="mt-2 flex-shrink-0 flex justify-center w-full py-2 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 hover:from-indigo-500/20 hover:to-purple-500/20 text-indigo-400 hover:text-indigo-300 border border-indigo-500/20 text-xs font-bold rounded-xl transition-all">
               Lihat Semua Transaksi
             </Link>
           </div>
         </div>
 
         {/* Presensi Status */}
-        <div className="flex flex-col gap-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
-              <Activity size={16} className="text-indigo-400" /> 
+        <div className="flex flex-col gap-2 min-h-0 overflow-hidden">
+          <div className="flex justify-between items-center flex-shrink-0">
+            <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+              <Activity size={14} className="text-indigo-400" /> 
               Status Presensi
             </h2>
-            <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+            <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-500 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
               <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full live-pulse"></div>
               Live
             </span>
           </div>
           
-          <div className="flex flex-col gap-3">
+          <div className="glass-premium rounded-2xl p-4 flex flex-col justify-between flex-1 min-h-0">
             {/* Owner Status */}
-            <div className="glass-premium rounded-2xl md:rounded-3xl p-5">
-              <div className="flex items-center gap-3 mb-4">
+            <div>
+              <div className="flex items-center gap-3 mb-2.5">
                 {presensi?.owner?.is_monitoring ? (
-                  <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-500 border border-emerald-500/20">
-                    <ShieldCheck size={18} />
+                  <div className="p-1.5 bg-emerald-500/10 rounded-xl text-emerald-500 border border-emerald-500/20">
+                    <ShieldCheck size={16} />
                   </div>
                 ) : (
-                  <div className="p-2 bg-zinc-500/10 rounded-xl text-zinc-400 border border-zinc-500/20">
-                    <ShieldAlert size={18} />
+                  <div className="p-1.5 bg-zinc-500/10 rounded-xl text-zinc-400 border border-zinc-500/20">
+                    <ShieldAlert size={16} />
                   </div>
                 )}
                 <div>
-                  <h3 className="text-sm font-bold text-white">Sistem Pribadi</h3>
+                  <h3 className="text-xs font-bold text-white">Sistem Pribadi</h3>
                   <p className="text-[10px] font-medium text-zinc-500">Auto-presensi portal kampus</p>
                 </div>
               </div>
               
               <div className="grid grid-cols-2 gap-2">
-                <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
-                  <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider block mb-1">Status</span>
+                <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+                  <span className="text-zinc-500 text-[9px] font-bold uppercase tracking-wider block mb-0.5">Status</span>
                   {presensi?.owner?.is_monitoring ? (
                     <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full live-pulse"></span> Aktif
@@ -354,29 +366,32 @@ export default function Dashboard() {
                     <span className="text-xs font-bold text-zinc-500">Nonaktif</span>
                   )}
                 </div>
-                <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.04]">
-                  <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider block mb-1">Kelas</span>
-                  <span className="font-bold text-white text-sm">{presensi?.owner?.sudah_absen?.length || 0}</span>
+                <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+                  <span className="text-zinc-500 text-[9px] font-bold uppercase tracking-wider block mb-0.5">Kelas</span>
+                  <span className="font-bold text-white text-xs">{presensi?.owner?.sudah_absen?.length || 0}</span>
                   <span className="text-[10px] text-zinc-600 ml-1">dihadiri</span>
                 </div>
               </div>
             </div>
 
+            {/* Divider */}
+            <div className="border-t border-white/5 my-2"></div>
+
             {/* Public Users Status */}
-            <div className="glass-premium rounded-2xl md:rounded-3xl p-5">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-violet-500/10 rounded-xl text-violet-400 border border-violet-500/20">
-                  <Users size={18} />
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-1.5 bg-violet-500/10 rounded-xl text-violet-400 border border-violet-500/20">
+                  <Users size={16} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">Multi-User</h3>
+                  <h3 className="text-xs font-bold text-white">Multi-User</h3>
                   <p className="text-[10px] font-medium text-zinc-500">Pengguna terdaftar di bot</p>
                 </div>
               </div>
               
-              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.04] flex justify-between items-center">
-                <span className="text-zinc-500 text-[10px] font-bold uppercase tracking-wider">Pengguna Aktif</span>
-                <span className="font-bold text-white flex items-center gap-2 text-sm">
+              <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04] flex justify-between items-center">
+                <span className="text-zinc-500 text-[9px] font-bold uppercase tracking-wider">Pengguna Aktif</span>
+                <span className="font-bold text-white flex items-center gap-2 text-xs">
                   <span className="w-2 h-2 rounded-full bg-violet-500 shadow-[0_0_8px_#a855f7]"></span>
                   {Object.keys(presensi?.publicUsers || {}).length} User
                 </span>

@@ -40,36 +40,36 @@ export default function RecentTransactions({ transactions, onRefresh }: RecentTr
   const hasTransactions = transactions.length > 0;
 
   return (
-    <div className="glass-premium rounded-2xl md:rounded-3xl p-4 md:p-5 flex flex-col min-h-0 overflow-hidden">
-      <div className="flex justify-between items-center mb-3 flex-shrink-0">
-        <h2 className="text-sm md:text-base font-bold text-white mb-0">Transaksi Terbaru</h2>
+    <div className="glass-premium rounded-3xl p-8 flex flex-col h-full">
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-lg font-bold text-white mb-0">Transaksi Terbaru</h2>
         <button onClick={() => navigate('/riwayat')} className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer">Lihat Semua</button>
       </div>
 
-      <div className="flex flex-col gap-1.5 overflow-y-auto pr-1 custom-scrollbar" style={{ maxHeight: '500px' }}>
+      <div className="flex flex-col gap-4 flex-1">
         {hasTransactions ? (
-           transactions.map(tx => (
+           transactions.slice(0, 5).map(tx => (
             <SwipeableTransaction key={tx.id} onDelete={() => handleDelete(tx.id)}>
-              <div className="flex items-center justify-between p-3 md:p-3.5 bg-transparent hover:bg-white/5 rounded-2xl transition-colors cursor-pointer group">
-                <div className="flex items-center gap-3.5">
-                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-[0_0_15px_currentColor] border ${tx.type === 'pemasukan' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
+              <div className="flex items-center justify-between p-4 bg-transparent hover:bg-white/5 transition-colors cursor-pointer group">
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-[0_0_15px_currentColor] border ${tx.type === 'pemasukan' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
                     {tx.type === 'pemasukan' ? <ArrowDownRight size={20} /> : <ArrowUpRight size={20} />}
                   </div>
                   <div>
-                    <div className="text-xs md:text-sm font-bold text-white mb-0.5 capitalize group-hover:text-indigo-200 transition-colors">{tx.category}</div>
+                    <div className="text-sm font-bold text-white mb-1 capitalize group-hover:text-indigo-200 transition-colors">{tx.category}</div>
                     <div className="text-[11px] font-medium text-zinc-500">
                       {new Date(tx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} • {new Date(tx.date).toLocaleTimeString('id-ID', { hour: '2-digit', minute:'2-digit' })}
                     </div>
                   </div>
                 </div>
-                <div className={`text-xs md:text-sm font-bold ${tx.type === 'pemasukan' ? 'text-emerald-500' : 'text-red-500'}`}>
+                <div className={`text-base font-bold ${tx.type === 'pemasukan' ? 'text-emerald-500' : 'text-red-500'}`}>
                   {tx.type === 'pemasukan' ? '+' : '-'}{formatCurrency(tx.amount)}
                 </div>
               </div>
             </SwipeableTransaction>
            ))
         ) : (
-          <div className="text-center py-8">
+          <div className="text-center py-12">
             <p className="text-zinc-500 text-sm">Belum ada transaksi terbaru</p>
           </div>
         )}
@@ -77,7 +77,7 @@ export default function RecentTransactions({ transactions, onRefresh }: RecentTr
 
       <button 
         onClick={() => navigate('/riwayat')}
-        className="w-full py-2.5 mt-3 flex-shrink-0 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 hover:from-indigo-500/40 hover:to-purple-500/40 text-indigo-300 hover:text-white border border-indigo-500/30 text-xs font-bold rounded-xl transition-all cursor-pointer"
+        className="w-full py-3.5 mt-6 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 hover:from-indigo-500/40 hover:to-purple-500/40 text-indigo-300 hover:text-white border border-indigo-500/30 text-sm font-bold rounded-2xl transition-all cursor-pointer"
       >
         Lihat Semua Transaksi
       </button>

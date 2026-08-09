@@ -8,7 +8,7 @@ interface FinanceHeaderProps {
 
 export default function FinanceHeader({ period, setPeriod, onOpenModal }: FinanceHeaderProps) {
   return (
-    <div className="mb-2 flex flex-col md:flex-row items-start md:items-end justify-between gap-4 flex-shrink-0">
+    <div className="mb-10 flex flex-col md:flex-row items-start md:items-end justify-between gap-6">
       
       <div className="flex flex-row gap-3 items-center w-full md:w-auto">
         <div className="flex-1 sm:flex-none flex items-center gap-1.5 sm:gap-2 p-2 sm:p-2.5 glass rounded-xl border-white/10 bg-[#141A28]/80 hover:bg-[#141A28] transition-colors">

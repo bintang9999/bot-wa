@@ -51,7 +51,7 @@ export default function SummaryCards({ income, expense, balance, cashBalance, eW
 
   return (
     <>
-       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8 flex-shrink-0">
+       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
          
          {/* Card 1: Pemasukan */}
          <div 

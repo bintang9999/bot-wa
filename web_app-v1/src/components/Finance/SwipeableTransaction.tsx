@@ -58,23 +58,21 @@ export default function SwipeableTransaction({ onDelete, children }: SwipeableTr
   }, [isOpen]);
 
   return (
-    <div className="relative flex-shrink-0 overflow-hidden rounded-2xl w-full mb-2" onClick={(e) => e.stopPropagation()}>
+    <div className="relative overflow-hidden rounded-2xl w-full mb-3" onClick={(e) => e.stopPropagation()}>
       {/* Background action (Delete) */}
-      {(isOpen || isSwiping || currentX < 0) && (
-        <div className="absolute inset-0 bg-red-500/20 flex justify-end items-center px-4 border border-red-500/30 rounded-2xl">
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-              setIsOpen(false);
-              setCurrentX(0);
-            }}
-            className="w-10 h-10 bg-red-500 hover:bg-red-600 flex items-center justify-center rounded-xl text-white shadow-[0_0_15px_rgba(239,68,68,0.5)] transition-colors cursor-pointer"
-          >
-            <Trash2 size={18} />
-          </button>
-        </div>
-      )}
+      <div className="absolute inset-0 bg-red-500/20 flex justify-end items-center px-4 border border-red-500/30 rounded-2xl">
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+            setIsOpen(false);
+            setCurrentX(0);
+          }}
+          className="w-10 h-10 bg-red-500 hover:bg-red-600 flex items-center justify-center rounded-xl text-white shadow-[0_0_15px_rgba(239,68,68,0.5)] transition-colors cursor-pointer"
+        >
+          <Trash2 size={18} />
+        </button>
+      </div>
 
       {/* Foreground content */}
       <div 

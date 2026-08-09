@@ -34,7 +34,7 @@ export default function FinancialSummary({ income, expense, balance, barChartDat
                     data={[{value: income, color: '#10b981'}, {value: expense, color: '#ef4444'}]}
                     cx="50%" cy="50%" innerRadius={55} outerRadius={70} paddingAngle={2} dataKey="value" stroke="none"
                   >
-                    <Cell fill="#10b981" />
+                    <Cell fill="#ffffffff" />
                     <Cell fill="#ef4444" />
                   </Pie>
                 </PieChart>
@@ -47,7 +47,7 @@ export default function FinancialSummary({ income, expense, balance, barChartDat
             <div className="flex flex-col gap-4 flex-1 w-full">
               <div className="bg-white/5 rounded-xl p-3 border border-white/5">
                 <div className="flex items-center justify-between text-xs mb-2">
-                  <div className="flex items-center gap-2 text-zinc-400"><div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]"></div> Pemasukan</div>
+                  <div className="flex items-center gap-2 text-zinc-400"><div className="w-2 h-2 rounded-full bg-white shadow-[0_0_8px_#10b981]"></div> Pemasukan</div>
                   <span className="text-emerald-500 font-bold">{incomePercent}%</span>
                 </div>
                 <div className="text-sm font-bold text-white">{formatCurrency(income)}</div>
